@@ -1,0 +1,27 @@
+{
+	"manifest_version": 2,
+
+	"name": "Voice Macro Recording",
+	"description": "Record custom voice commands",
+	"version": "0.0.1",
+
+	"background": {
+      "scripts": ["background.js"]
+    },
+
+	"browser_action": {
+		"default_icon": "icon.png",
+		"default_popup": "popup/popup.html",
+		"default_title": "Record a Voice Macro"
+	},
+
+	"permissions": [
+		"activeTab",
+		"tabs"
+	],
+
+	"content_scripts": [{
+		"matches": ["http://*/*", "https://*/*", "file://*/*"],
+		"js": ["recorder.js"]
+	}]
+}
