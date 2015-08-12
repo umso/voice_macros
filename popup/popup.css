@@ -1,6 +1,18 @@
-/*h1 {
-	font-family: 'Open Sans', arial;
-	-webkit-font-smoothing: antialiased;
-	font-weight: 300;
-	color: #555;
-}*/
+.title-card > .mdl-card__title {
+  color: #fff;
+  background-color: #2C3E50;
+}
+
+.recording-card > .mdl-card__title {
+	color: #fff;
+	background-color: #E74C3C;
+}
+
+.mdl-card {
+	/*
+	background-color: #ECF0F1
+	*/
+}
+.mdl-button.mdl-button--colored {
+	color: #E74C3C;
+}

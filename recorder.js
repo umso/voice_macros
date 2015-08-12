@@ -814,6 +814,9 @@ recorder = new TestRecorder.Recorder();
 recorder.logfunc = function(msg) {console.log(msg);};
 
 TestRecorder.Recorder.prototype.start = function() {
+    var url = window.location.href;
+    this.open(url);
+
     this.window = window;
     this.captureEvents();
 
@@ -831,20 +834,20 @@ TestRecorder.Recorder.prototype.start = function() {
     script.parentNode.removeChild(script);
 
     this.active = true;
-    this.log("recorder started");
+    //this.log("recorder started");
 }
 
 TestRecorder.Recorder.prototype.stop = function() {
     this.releaseEvents();
     this.active = false;
-    this.log("recorder stopped");
+    //this.log("recorder stopped");
     return;
 }
 
 TestRecorder.Recorder.prototype.open = function(url) {
     var e = new TestRecorder.OpenURLEvent(url);
     this.testcase.append(e);
-    this.log("open url: " + url);
+    //this.log("open url: " + url);
 }
 
 TestRecorder.Recorder.prototype.pageLoad = function() {
@@ -852,7 +855,7 @@ TestRecorder.Recorder.prototype.pageLoad = function() {
     var et = TestRecorder.EventTypes;
     var e = new TestRecorder.DocumentEvent(et.PageLoad, doc);
     this.testcase.append(e);
-    this.log("page loaded url: " + e.url);
+    //this.log("page loaded url: " + e.url);
 }
 
 TestRecorder.Recorder.prototype.captureEvents = function() {
@@ -1082,9 +1085,7 @@ TestRecorder.Recorder.prototype.log = function(text) {
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var action = request.action;
-    console.log(request);
     if (action == "start") {
-        console.log('got start message in recorder.js')
         recorder.start();
         sendResponse({});
     } else if (action == "stop") {

@@ -6,15 +6,48 @@
         <script type='text/javascript' src='vendor/jquery-2.1.4.min.js'></script>
         <script type='text/javascript' src='vendor/jquery-ui-1.11.4.custom/jquery-ui.min.js'></script>
         <script type='text/javascript' src='vendor/mdl/material.min.js'></script>
+        <script type='text/javascript' src='actionDisplay.js'></script>
+        <script type='text/javascript' src='gotoDisplay.js'></script>
+        <script type='text/javascript' src='clickDisplay.js'></script>
+        <script type='text/javascript' src='casperCompiler.js'></script>
+        <script type='text/javascript' src='recorderLink.js'></script>
         <script type='text/javascript' src='popup.js'></script>
-        <link rel="stylesheet" href="vendor/mdl/material.min.css">
-        <link rel="stylesheet" href="vendor/mdl/MaterialIcons.css">
+        <link rel='stylesheet' href='vendor/mdl/material.min.css'>
+        <link rel='stylesheet' href='vendor/mdl/MaterialIcons.css'>
         <link type='text/css' rel='stylesheet' href='popup.css'>
     </head>
     <body>
-        <h5>Voice&nbsp;Commander</h5>
+        <div style='display: none;' id='introduction_card' class='mdl-card mdl-shadow--2dp title-card'>
+            <div class='mdl-card__title'>
+                <h2 class='mdl-card__title-text'>Voice&nbsp;Commander</h2>
+            </div>
+            <div class='mdl-card__supporting-text'>
+                Voice Commander allows you to define custom voice-directed commands by demonstrating them in Chrome.
+            </div>
+            <div class='mdl-card__actions mdl-card--border'>
+                <a id='createCommand' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
+                    Create a command
+                </a>
+            </div>
+        </div>
+        <div style='display: none;' id='recording_card' class='mdl-card mdl-shadow--2dp recording-card'>
+            <div class='mdl-card__title'>
+                <h2 class='mdl-card__title-text'>Recording&nbsp;Command</h2>
+            </div>
+            <div class='mdl-card__actions mdl-card--border'>
+                <a id='stop_recording' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
+                    I'm Done
+                </a>
+            </div>
+        </div>
+        <!--
         <button id='start_recording' class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
-        Start Recording
+            Start Recording
         </button>
+        <button id='stop_recording' class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+            Stop Recording
+        </button>
+        <div id='currentRecordingActions'></div>
+    -->
     </body>
 </html>

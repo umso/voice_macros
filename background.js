@@ -1,5 +1,7 @@
 var currentRecording,
-	isRecording = false;
+	isRecording = false,
+	recordingTabID,
+	startingURL;
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
@@ -16,11 +18,30 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 });
 
+function updateIcon() {
+	var status = doGetStatus();
+	var iconFilename = status.isRecording ? 'icon_active' : 'icon_idle';
+	chrome.browserAction.setIcon({
+		path: {
+			'19': 'icons/' + iconFilename + '19.png',
+			'38': 'icons/' + iconFilename + '38.png'
+		}
+	});
+}
+
 function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = [];
 		isRecording = true;
-		chrome.tabs.sendMessage(tab_id, { action: 'start' });
+
+		updateIcon();
+		recordingTabID = tab_id;
+
+		getTab(recordingTabID).then(function(tab) {
+			startingURL = tab.url;
+		}).then(function() {
+			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
+		});
 	}
 }
 
@@ -30,14 +51,43 @@ function doGetStatus() {
 	};
 }
 
+function addStartingURL(recording) {
+	var needsStartingURL = false;
+
+	if(recording.length === 0) {
+		needsStartingURL = true;
+	}
+
+	if(needsStartingURL) {
+		currentRecording.unshift({
+
+		});
+	}
+}
+
 function doStop() {
-	isRecording = false;
+	if(isRecording) {
+		isRecording = false;
+
+		addStartingURL(currentRecording);
+
+		updateIcon();
+		chrome.tabs.sendMessage(recordingTabID, { action: 'stop' });
+	}
 }
 
 function doGetRecording() {
 	return currentRecording;
 }
 
-fucntion doAppend(action) {
+function doAppend(action) {
 	currentRecording.push(action);
+}
+
+function getTab(tab_id) {
+	return new Promise(function(resolve, reject) {
+		chrome.tabs.get(tab_id, function(tab) {
+			resolve(tab);
+		});
+	});
 }
