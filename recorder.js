@@ -1,3 +1,5 @@
+(function() {
+
 //----------------------------------------------------------------------------
 //Copyright (c) 2005 Zope Foundation and Contributors.
 
@@ -1115,3 +1117,5 @@ chrome.runtime.sendMessage({action: "get_status"}, function(response) {
         recorder.start();
     }
 });
+
+}());

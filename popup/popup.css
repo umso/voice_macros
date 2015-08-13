@@ -13,6 +13,70 @@
 	background-color: #ECF0F1
 	*/
 }
+.recording-card > .mdl-card__actions {
+	background-color: #ECF0F1
+}
 .mdl-button.mdl-button--colored {
 	color: #E74C3C;
+}
+
+
+.command {
+    color: #333;
+}
+
+.uri {
+    color: #666;
+}
+.uri > .delimiter {
+    color: #AAA;
+}
+.uri > .hostName {
+    color: #666;
+}
+.uri > .protocol {
+    color: #AAA;
+}
+.uri > .path {
+    color: #AAA;
+}
+
+#actions_card {
+	background-color: #ECF0F1
+}
+
+#actions_card > .mdl-card__title {
+    background-color: #3498DB;
+    color: white;
+}
+
+.step_number {
+    background-color: #666;
+    margin: 3px;
+    margin-left: 14px;
+    display: inline-block;
+    text-align: center;
+
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    opacity: 0.75;
+}
+
+.step_number > p.num {
+    color: white;
+    margin: 10% auto 0 auto;
+    font-family: "HelveticaNeue-UltraLight", "Helvetica Neue UltraLight", "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    font-weight: 100;
+}
+
+.step {
+    border-bottom: 1px solid #DDD;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-weight: 300;
+}
+
+.step:last-child {
+    border-bottom: none;
 }

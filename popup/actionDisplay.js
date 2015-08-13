@@ -22,8 +22,8 @@ $.widget('voice_commander.actionDisplay', {
 			}
 		}).then(function (recording) {
 			if(recording) {
-				recording.forEach(function(action) {
-					var display = this._getDisplay(action);
+				recording.forEach(function(action, index) {
+					var display = this._getDisplay(action, index+1);
 					this.actionList.append(display);
 				}.bind(this));
 			} else {
@@ -31,26 +31,105 @@ $.widget('voice_commander.actionDisplay', {
 		}.bind(this));
 	},
 
-	_getDisplay: function(action) {
+	_getDisplay: function(action, index) {
 		var uid = action.uid,
-			type = action.type;
+			type = action.type,
+			display;
 
 		if(this.itemDisplays.hasOwnProperty(uid)) {
-			return this.itemDisplays[uid];
+			display = this.itemDisplays[uid];
 		} else {
-			var display = $('<div />');
-			if(type === VOICE_COMMANDER_EVENT_CODE.OpenUrl) {
-				display.gotoDisplay({
-					action: action
-				});
-			} else if(type === VOICE_COMMANDER_EVENT_CODE.Click) {
-				display.clickDisplay({
-					action: action
-				});
-			}
+			display = $('<div />').step({
+				action: action
+			});
 
 			this.itemDisplays[uid] = display;
-			return display;
+		}
+
+		display.step('option', 'index', index);
+
+		return display;
+	}
+});
+
+$.widget('voice_commander.stepNumberDisplay', {
+	options: {
+		index: -1
+	},
+	_create: function() {
+		this.element.addClass('step_number');
+		this.numElement = $('<p />').appendTo(this.element)
+										.addClass('num')
+										.text(this.option('index'));
+	},
+	_destroy: function() {
+		this.element.removeClass('step_number');
+	},
+	_setOption: function(key, value) {
+		if(key == 'index') {
+			this.numElement.text(''+value);
+		}
+		this._super(key, value);
+	}
+});
+
+
+var ECODE = VOICE_COMMANDER_EVENT_CODE;
+
+$.widget('voice_commander.step', {
+	options: {
+		action: false,
+		index: -1
+	},
+	_create: function() {
+		this.stepNumberDisplay = $('<span />').appendTo(this.element).stepNumberDisplay();
+		this.stepDisplay = $('<span />').appendTo(this.element);
+
+		this.element.addClass('step');
+
+		this._updateActionDisplay();
+	},
+	_destroy: function() {
+		var displayTypeName = this._getDisplayTypeName(this.option('action').type);
+
+		this.stepNumberDisplay.stepNumberDisplay('destroy');
+	},
+	_setOption: function(key, value) {
+		if(key == 'index') {
+			this.stepNumberDisplay.stepNumberDisplay('option', key, value);
+		}
+		this._super(key, value);
+	},
+	_getDisplayTypeName: function(type) {
+		if(type === ECODE.OpenUrl) {
+			return 'gotoDisplay';
+		} else if(type === ECODE.Click) {
+			return 'clickDisplay';
+		} else {
+			return false;
+		}
+	},
+	_updateActionDisplay: function() {
+		var action = this.option('action'),
+			type = action.type,
+			displayTypeName = this._getDisplayTypeName(type),
+			display = this.stepDisplay;
+
+		if(displayTypeName) {
+			display[displayTypeName]({
+				action: action
+			});
+		} else {
+			for(var key in ECODE) {
+				if(ECODE.hasOwnProperty(key)) {
+					var value = ECODE[key];
+
+					if(value === type) {
+						display.text('<'+key+'>');
+						break;
+					}
+				}
+			}
 		}
 	}
 });

@@ -23,11 +23,11 @@ $(function() {
 });
 function enterRecordingState() {
 	$('#introduction_card').hide();
-	$('#recording_card').show();
+	$('#recording_card, #actions_card').show();
 }
 function enterIdleState() {
 	$('#introduction_card').show();
-	$('#recording_card').hide();
+	$('#recording_card, #actions_card').hide();
 }
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;

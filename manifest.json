@@ -12,7 +12,7 @@
 	"browser_action": {
 		"default_icon": "icons/icon_idle.png",
 		"default_popup": "popup/popup.html",
-		"default_title": "Record a Voice Macro"
+		"default_title": "Voice Commander"
 	},
 
 	"permissions": [

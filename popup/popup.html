@@ -33,15 +33,21 @@
         </div>
         <div style='display: none;' id='recording_card' class='mdl-card mdl-shadow--2dp recording-card'>
             <div class='mdl-card__title'>
-                <h2 class='mdl-card__title-text'>Recording&nbsp;Command</h2>
+                <h2 class='mdl-card__title-text'>Recording</h2>
             </div>
-            <div class='mdl-card__actions mdl-card--border'>
-                <a id='stop_recording' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
-                    I'm Done
-                </a>
+            <div class='mdl-card__supporting-text'>
+                Voice Commander is currently recording your actions in Chrome (such as clicks and keypresses).
+                These actions will help write an automated command script. They will not be shared. <br />
             </div>
-            <div id='actionDisplay'>
+            <a id='stop_recording' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
+                I'm Done
+            </a>
+        </div>
+        <div style='display: none;' id='actions_card' class='mdl-card mdl-shadow--2dp'>
+            <div class='mdl-card__title'>
+                <h2 class='mdl-card__title-text'>Steps</h2>
             </div>
+            <div id='actionDisplay'></div>
         </div>
     </body>
 </html>
