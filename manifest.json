@@ -22,7 +22,7 @@
 
 	"content_scripts": [{
 		"matches": ["http://*/*", "https://*/*", "file://*/*"],
-		"js": ["recorder.js"]
+		"js": ["eventCodes.js", "recorder.js"]
 	}],
 
 	"icons": {

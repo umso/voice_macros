@@ -1,7 +1,8 @@
 var currentRecording,
 	isRecording = false,
 	recordingTabID,
-	startingURL;
+	startingURL,
+	uid = 1;
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
@@ -81,6 +82,7 @@ function doGetRecording() {
 }
 
 function doAppend(action) {
+	action.uid = uid++;
 	currentRecording.push(action);
 }
 

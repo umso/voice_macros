@@ -18,6 +18,8 @@ $(function() {
 			downloadJSFile(casperScript, 'casper_script.js');
 		});
 	});
+
+	$('#actionDisplay').actionDisplay();
 });
 function enterRecordingState() {
 	$('#introduction_card').hide();
@@ -34,6 +36,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	} else if(action === 'stop') {
 		enterIdleState();
 	} else if(action === 'append') {
-		console.log('append');
+		$('#actionDisplay').actionDisplay('refresh');
 	}
 });

@@ -148,10 +148,18 @@ TestRecorder.Event = function(e) {
     this.event = (e) ? e : window.event;
 }
 
+for(var key in VOICE_COMMANDER_BUTTON_CODE) {
+    if(VOICE_COMMANDER_BUTTON_CODE.hasOwnProperty(key)) {
+        TestRecorder.Event[key] = VOICE_COMMANDER_BUTTON_CODE[key];
+    }
+}
+/*
+
 TestRecorder.Event.LeftButton = 0;
 TestRecorder.Event.MiddleButton = 1;
 TestRecorder.Event.RightButton = 2;
 TestRecorder.Event.UnknownButton = 3;
+*/
 
 TestRecorder.Event.prototype.stopPropagation = function() {
     if (this.event.stopPropagation)
@@ -271,6 +279,12 @@ if (typeof(TestRecorder.EventTypes) == "undefined") {
     TestRecorder.EventTypes = {};
 }
 
+for(var key in VOICE_COMMANDER_EVENT_CODE) {
+    if(VOICE_COMMANDER_EVENT_CODE.hasOwnProperty(key)) {
+        TestRecorder.EventTypes[key] = VOICE_COMMANDER_EVENT_CODE[key];
+    }
+}
+/*
 TestRecorder.EventTypes.OpenUrl = 0;
 TestRecorder.EventTypes.Click = 1;
 TestRecorder.EventTypes.Change = 2;
@@ -295,6 +309,7 @@ TestRecorder.EventTypes.MouseUp = 20;
 TestRecorder.EventTypes.MouseDrag = 21;
 TestRecorder.EventTypes.MouseDrop = 22;
 TestRecorder.EventTypes.KeyPress = 23;
+*/
 
 TestRecorder.ElementInfo = function(element) {
     this.action = element.action;

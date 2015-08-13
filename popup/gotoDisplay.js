@@ -1,11 +1,10 @@
-$.widget('voice_commander.clickDisplay', {
+$.widget('voice_commander.gotoDisplay', {
 	options: {
 		action: false
 	},
 	_create: function() {
 		var action = this.option('action');
-		console.log(action);
-		this.element.text('Click');
+		this.element.text('Go to ' + action.url);
 	},
 	_destroy: function() {
 
