@@ -19,6 +19,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	}
 });
 
+// If the user starts recording and closes the browser
+// then when they restart the browser, the icon indicates recording
+// update the icon to prevent that from happening
+updateIcon();
+
 function updateIcon() {
 	var status = doGetStatus();
 	var iconFilename = status.isRecording ? 'icon_active' : 'icon_idle';

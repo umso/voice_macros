@@ -4,10 +4,8 @@ $.widget('voice_commander.clickDisplay', {
 	},
 	_create: function() {
 		var action = this.option('action');
-		console.log(action);
-		this.element.text('Click');
+		this.element.text('Click ');
 	},
 	_destroy: function() {
-
 	}
 });
