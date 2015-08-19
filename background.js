@@ -48,7 +48,22 @@ function doStart(tab_id) {
 		}).then(function() {
 			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
 		});
+		chrome.management.getSelf(function(self) {
+			var id = self.id;
+			window.open('chrome-extensions://'+id+);
+			console.log(self);
+		});
 	}
+
+	var recognition = new webkitSpeechRecognition();
+
+	recognition.onresult = function(event) {
+		console.log(event);
+	};
+	recognition.onerror = function(event) {
+		console.error(event);
+	};
+	recognition.start();
 }
 
 function doGetStatus() {

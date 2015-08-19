@@ -15,7 +15,7 @@ $(function() {
 		postStop().then(function() {
 			return renderCasper();
 		}).then(function(casperScript) {
-			downloadJSFile(casperScript, 'casper_script.js');
+			//downloadJSFile(casperScript, 'casper_script.js');
 		});
 	});
 

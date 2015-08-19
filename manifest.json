@@ -17,7 +17,9 @@
 
 	"permissions": [
 		"activeTab",
-		"tabs"
+		"tabs",
+		"tts",
+		"management"
 	],
 
 	"content_scripts": [{
