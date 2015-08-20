@@ -35,6 +35,48 @@ function updateIcon() {
 	});
 }
 
+var recognition;
+
+function beginSpeechRecognition() {
+	recognition = new webkitSpeechRecognition();
+	var promise = new Promise(function(resolve, reject) {
+		recognition.addEventListener('result', function(event) {
+			console.log('result');
+			console.log(event);
+			resolve(event);
+		});
+	});
+	recognition.addEventListener('error', function(event) {
+		console.log(event);
+		if(event.error === 'not-allowed') {
+			requestSpeechPermission().then(function(hasPermission) {
+				if(hasPermission) {
+					console.log('done');
+					recognition.start();
+				}
+			});
+		}
+	});
+	recognition.start();
+	console.log('start recognition')
+	return promise;
+}
+
+function endSpeechRecognition(recognition) {
+	recognition.end();
+}
+
+function requestSpeechPermission(ready) {
+	return new Promise(function(resolve, reject) {
+		var requestSpeechWindow = window.open('requestSpeechPermission.html');
+		requestSpeechWindow.addEventListener("message", function(e) {
+			console.log(e);
+			requestSpeechWindow.close();
+			resolve(true);
+		});
+	});
+}
+
 function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = [];
@@ -48,22 +90,9 @@ function doStart(tab_id) {
 		}).then(function() {
 			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
 		});
-		chrome.management.getSelf(function(self) {
-			var id = self.id;
-			window.open('chrome-extensions://'+id+);
-			console.log(self);
-		});
+
+		beginSpeechRecognition();
 	}
-
-	var recognition = new webkitSpeechRecognition();
-
-	recognition.onresult = function(event) {
-		console.log(event);
-	};
-	recognition.onerror = function(event) {
-		console.error(event);
-	};
-	recognition.start();
 }
 
 function doGetStatus() {
