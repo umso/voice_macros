@@ -22,7 +22,8 @@ var VOICE_COMMANDER_EVENT_CODE = {
 		MouseUp: 20,
 		MouseDrag: 21,
 		MouseDrop: 22,
-		KeyPress: 23
+		KeyPress: 23,
+		ReadElement: 24
 	},
 	VOICE_COMMANDER_BUTTON_CODE = {
 		LeftButton: 0,

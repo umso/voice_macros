@@ -2,7 +2,8 @@ var currentRecording,
 	isRecording = false,
 	recordingTabID,
 	startingURL,
-	uid = 1;
+	uid = 1,
+	readContextMenu;
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
@@ -37,29 +38,41 @@ function updateIcon() {
 
 var recognition;
 
-function beginSpeechRecognition() {
-	recognition = new webkitSpeechRecognition();
-	var promise = new Promise(function(resolve, reject) {
-		recognition.addEventListener('result', function(event) {
-			console.log('result');
-			console.log(event);
-			resolve(event);
+function addCommands() {
+	return new Promise(function(resolve, reject) {
+		var rv = annyang.addCommands({
+			"testing": function() {
+				console.log('did it!');
+			}
+		});
+
+		resolve(rv);
+	});
+}
+
+function beginSpeechRecognition(onResult) {
+	return new Promise(function(resolve, reject) {
+		navigator.webkitGetUserMedia({
+			audio: true,
+		}, function(stream) {
+			stream.getAudioTracks().forEach(function(track) {
+				track.stop();
+			});
+			resolve(annyang.start());
+		}, function(event) {
+			if(event.error === 'not-allowed') {
+				resolve(requestSpeechPermission().then(function(hasPermission) {
+					if(hasPermission) {
+						return annyang.start();
+					} else {
+						throw new Error("Permission Denied by user");
+					}
+				}));
+			} else {
+				reject(event);
+			}
 		});
 	});
-	recognition.addEventListener('error', function(event) {
-		console.log(event);
-		if(event.error === 'not-allowed') {
-			requestSpeechPermission().then(function(hasPermission) {
-				if(hasPermission) {
-					console.log('done');
-					recognition.start();
-				}
-			});
-		}
-	});
-	recognition.start();
-	console.log('start recognition')
-	return promise;
 }
 
 function endSpeechRecognition(recognition) {
@@ -70,9 +83,12 @@ function requestSpeechPermission(ready) {
 	return new Promise(function(resolve, reject) {
 		var requestSpeechWindow = window.open('requestSpeechPermission.html');
 		requestSpeechWindow.addEventListener("message", function(e) {
-			console.log(e);
-			requestSpeechWindow.close();
-			resolve(true);
+			if(event.data === "granted") {
+				resolve(true);
+				requestSpeechWindow.close();
+			} else {
+				resolve(false);
+			}
 		});
 	});
 }
@@ -91,7 +107,15 @@ function doStart(tab_id) {
 			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
 		});
 
-		beginSpeechRecognition();
+		addCommands().then(function() {
+			return beginSpeechRecognition();
+		});
+
+		readContextMenu = chrome.contextMenus.create({
+			"title": "Read This",
+			"contexts": ["page", "selection", "image", "link"],
+			"onclick" : onRead
+		});
 	}
 }
 
@@ -123,6 +147,7 @@ function doStop() {
 
 		updateIcon();
 		chrome.tabs.sendMessage(recordingTabID, { action: 'stop' });
+		chrome.contextMenus.remove(readContextMenu);
 	}
 }
 
@@ -142,3 +167,7 @@ function getTab(tab_id) {
 		});
 	});
 }
+
+var onRead = function() {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'tts_element' });
+};

@@ -1046,6 +1046,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     } else if (action == "stop") {
         recorder.stop();
         sendResponse({});
+    } else if (action === 'tts_element') {
+        var selection = getSelection();
+        var t = selection.baseNode;
+        var e = new TestRecorder.ElementEvent(EVENT_CODE.ReadElement, t);
+        console.log(getSelection());
     }
 });
 
