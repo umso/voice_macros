@@ -51,6 +51,17 @@ function addCommands() {
 }
 
 function beginSpeechRecognition(onResult) {
+	var onHasPermission = function() {
+		annyang.start();
+		recognition = new webkitSpeechRecognition();
+		recognition.continuous = true;
+		recognition.addEventListener('result', function(event) {
+
+		});
+		recognition.start();
+		return true;
+	};
+
 	return new Promise(function(resolve, reject) {
 		navigator.webkitGetUserMedia({
 			audio: true,
@@ -58,12 +69,12 @@ function beginSpeechRecognition(onResult) {
 			stream.getAudioTracks().forEach(function(track) {
 				track.stop();
 			});
-			resolve(annyang.start());
+			resolve(onHasPermission());
 		}, function(event) {
 			if(event.error === 'not-allowed') {
 				resolve(requestSpeechPermission().then(function(hasPermission) {
 					if(hasPermission) {
-						return annyang.start();
+						return onHasPermission();
 					} else {
 						throw new Error("Permission Denied by user");
 					}
@@ -76,6 +87,7 @@ function beginSpeechRecognition(onResult) {
 }
 
 function endSpeechRecognition(recognition) {
+	annyang.abort();
 	recognition.end();
 }
 
