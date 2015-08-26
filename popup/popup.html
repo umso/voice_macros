@@ -7,6 +7,7 @@
         <script type='text/javascript' src='vendor/jquery-ui-1.11.4.custom/jquery-ui.min.js'></script>
         <script type='text/javascript' src='vendor/mdl/material.min.js'></script>
         <script type='text/javascript' src='../eventCodes.js'></script>
+        <script type='text/javascript' src='macroName.js'></script>
         <script type='text/javascript' src='actionDisplay.js'></script>
         <script type='text/javascript' src='gotoDisplay.js'></script>
         <script type='text/javascript' src='clickDisplay.js'></script>
@@ -45,7 +46,7 @@
         </div>
         <div style='display: none;' id='actions_card' class='mdl-card mdl-shadow--2dp'>
             <div class='mdl-card__title'>
-                <h2 class='mdl-card__title-text'>Steps</h2>
+                <h2 id='macro_name' class='mdl-card__title-text'></h2>
             </div>
             <div id='actionDisplay'></div>
         </div>

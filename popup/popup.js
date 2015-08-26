@@ -12,11 +12,7 @@ $(function() {
 	});
 
 	$('#stop_recording').on('click', function() {
-		postStop().then(function() {
-			return renderCasper();
-		}).then(function(casperScript) {
-			//downloadJSFile(casperScript, 'casper_script.js');
-		});
+		postStop();
 	});
 
 	$('#actionDisplay').actionDisplay();
@@ -31,22 +27,34 @@ function updateHeight() {
 }
 
 function enterRecordingState() {
-	$('#introduction_card').hide();
-	$('#recording_card, #actions_card').show();
-	updateHeight();
+	return new Promise(function(resolve) {
+		$('#introduction_card').hide();
+		$('#recording_card, #actions_card').show();
+		updateHeight();
+		resolve();
+	});
 }
 function enterIdleState() {
-	$('#introduction_card').show();
-	$('#recording_card, #actions_card').hide();
-	updateHeight();
+	return new Promise(function(resolve) {
+		$('#introduction_card').show();
+		$('#recording_card, #actions_card').hide();
+		updateHeight();
+		resolve();
+	});
 }
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
 	if(action === 'start') {
 		enterRecordingState();
 	} else if(action === 'stop') {
-		enterIdleState();
+		enterIdleState().then(function() {
+			return renderCasper();
+		}).then(function(casperScript) {
+			//downloadJSFile(casperScript, 'casper_script.js');
+		});
 	} else if(action === 'append') {
 		$('#actionDisplay').actionDisplay('refresh');
+	} else {
+		console.log(action);
 	}
 });

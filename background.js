@@ -36,14 +36,77 @@ function updateIcon() {
 	});
 }
 
-var recognition;
-
-function addCommands() {
+function addMacroRecordingCommands() {
 	return new Promise(function(resolve, reject) {
 		var rv = annyang.addCommands({
-			"testing": function() {
-				console.log('did it!');
+			"Culver's macro *name": nameMacro,
+			"name this macro *name": nameMacro,
+			"all this macro *name": nameMacro,
+			"call this macro *name": nameMacro,
+			"call this mac *name": nameMacro,
+			"call this microbe *name": nameMacro,
+			"call is macro *name": nameMacro,
+			"harvest macro *name": nameMacro,
+			"(and) when (the) :var is *value_and_action": function(var_name, value_and_action) {
+				var clickIndex = Math.max(value_and_action.indexOf('click'),
+											value_and_action.indexOf('clip'));
+				var value = value_and_action.substring(0, clickIndex).trim();
+
+				if(clickIndex >= 0) {
+					clickWhenValue(var_name, value);
+				}
+			},
+			"enter :var here": enterVar,
+			":var is this": setVarValueToSelection,
+			"this is :var": setVarValueToSelection,
+			"read this (aloud)": onRead,
+			"read this out loud": onRead
+			"respond with this": onRead
+		});
+
+		annyang.addCallback('resultNoMatch', function() {
+			console.log(arguments);
+		});
+
+		resolve(rv);
+	});
+}
+
+function removeMacroRecordingCommands() {
+	annyang.removeCommands();
+	addCoreCommands();
+}
+
+function addCoreCommands() {
+	var startRecording = function(name) {
+		getSelectedTab().then(function(tab) {
+			return doStart(tab.id);
+		}).then(function() {
+			if(name) {
+				console.log(name);
+				nameMacro(name);
 			}
+		});
+	};
+	var stopRecording = function() {
+		doStop();
+	};
+
+	return new Promise(function(resolve, reject) {
+		var rv = annyang.addCommands({
+			"create (a) (new) macro (called) (named) *name": startRecording,
+			"start (a) recording (a) (new) macro (called) (named) *name": startRecording,
+			"record (a) macro (called) (named) *name": startRecording,
+			"create (a) new macro": startRecording,
+			"start (a) recording": startRecording,
+			"start recording (a) (new) macro": startRecording,
+			"stop (a) (this) recording": stopRecording,
+			"stop (this) macro": stopRecording,
+			"end (this) macro": stopRecording
+		});
+
+		annyang.addCallback('resultNoMatch', function() {
+			console.log(arguments);
 		});
 
 		resolve(rv);
@@ -53,12 +116,11 @@ function addCommands() {
 function beginSpeechRecognition(onResult) {
 	var onHasPermission = function() {
 		annyang.start();
-		recognition = new webkitSpeechRecognition();
-		recognition.continuous = true;
-		recognition.addEventListener('result', function(event) {
-
-		});
-		recognition.start();
+		//recognition = new webkitSpeechRecognition();
+		//recognition.continuous = true;
+		//recognition.addEventListener('result', function(event) {
+		//});
+		//recognition.start();
 		return true;
 	};
 
@@ -86,9 +148,9 @@ function beginSpeechRecognition(onResult) {
 	});
 }
 
-function endSpeechRecognition(recognition) {
+function endSpeechRecognition() {
 	annyang.abort();
-	recognition.end();
+	//recognition.end();
 }
 
 function requestSpeechPermission(ready) {
@@ -105,6 +167,11 @@ function requestSpeechPermission(ready) {
 	});
 }
 
+addCoreCommands().then(function() {
+	return beginSpeechRecognition();
+});
+
+var recordingPromise;
 function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = [];
@@ -113,22 +180,23 @@ function doStart(tab_id) {
 		updateIcon();
 		recordingTabID = tab_id;
 
-		getTab(recordingTabID).then(function(tab) {
-			startingURL = tab.url;
-		}).then(function() {
-			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
-		});
-
-		addCommands().then(function() {
-			return beginSpeechRecognition();
-		});
-
 		readContextMenu = chrome.contextMenus.create({
 			"title": "Read This",
 			"contexts": ["page", "selection", "image", "link"],
 			"onclick" : onRead
 		});
+
+		recordingPromise = getTab(recordingTabID).then(function(tab) {
+			startingURL = tab.url;
+		}).then(function() {
+			chrome.runtime.sendMessage({action: 'start'});
+			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
+		}).then(function() {
+			return addMacroRecordingCommands();
+		});
 	}
+
+	return recordingPromise;
 }
 
 function doGetStatus() {
@@ -158,8 +226,9 @@ function doStop() {
 		addStartingURL(currentRecording);
 
 		updateIcon();
-		chrome.tabs.sendMessage(recordingTabID, { action: 'stop' });
+		chrome.runtime.sendMessage({action: 'stop'});
 		chrome.contextMenus.remove(readContextMenu);
+		removeMacroRecordingCommands();
 	}
 }
 
@@ -180,6 +249,30 @@ function getTab(tab_id) {
 	});
 }
 
-var onRead = function() {
+function onRead() {
 	chrome.tabs.sendMessage(recordingTabID, { action: 'tts_element' });
-};
+}
+
+function nameMacro(name) {
+	chrome.runtime.sendMessage({action: 'nameMacro', name: name});
+}
+
+function clickWhenValue(var_name, value) {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'clickWhen', var_name: var_name , value: value});
+}
+
+function enterVar(var_name) {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'enterVar', var_name: var_name });
+}
+
+function setVarValueToSelection(var_name) {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'setVarValueToSelection', var_name: var_name });
+}
+
+function getSelectedTab() {
+	return new Promise(function(resolve, reject) {
+		chrome.tabs.getSelected(null, function(tab) {
+			resolve(tab);
+		});
+	});
+}

@@ -1051,6 +1051,20 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var t = selection.baseNode;
         var e = new TestRecorder.ElementEvent(EVENT_CODE.ReadElement, t);
         console.log(getSelection());
+    } else if(action === 'clickWhen') {
+        var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
+        var e = new TestRecorder.ElementEvent(EVENT_CODE.ClickWhen, element);
+        e.var_name = request.var_name;
+        e.value = request.value;
+        console.log(element);
+    } else if(action === 'setVarValueToSelection') {
+        var selection = getSelection();
+        var t = selection.baseNode;
+        var e = new TestRecorder.ElementEvent(EVENT_CODE.SetVarValue, t);
+        console.log(getSelection());
+    } else {
+        console.log(action);
+        console.log(request);
     }
 });
 
@@ -1059,6 +1073,12 @@ chrome.runtime.sendMessage({action: "get_status"}, function(response) {
     if (response.isRecording) {
         recorder.start();
     }
+});
+
+var mouseLocation = {x: -1, y: -1};
+window.addEventListener('mousemove', function(event) {
+    mouseLocation.x = event.pageX;
+    mouseLocation.y = event.pageY;
 });
 
 }());
