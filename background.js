@@ -23,6 +23,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		sendResponse(doGetName());
 	} else if(action === 'set_name') {
 		nameMacro(request.value);
+	} else if(action === 'change_var_value') {
+		setTemporaryValue(request.name, request.value);
+		sendResponse(doGetVariables());
+	} else if(action === 'change_var_name') {
+		changeVarName(request.from, request.to);
+		sendResponse(doGetVariables());
 	}
 });
 
@@ -184,7 +190,10 @@ function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = {
 			name: "My Command",
-			vars: {},
+			vars: {
+				x: 'x value',
+				y: 'y value'
+			},
 			actions: []
 		};
 		isRecording = true;
@@ -275,6 +284,10 @@ function setRecordingVar(name, value) {
 	currentRecording.vars[name] = value;
 }
 
+function removeRecordingVar(name) {
+	delete currentRecording.vars[name];
+}
+
 function setRecordingVarIfUndefined(name, value) {
 	if(!currentRecording.vars.hasOwnProperty(name)) {
 		setRecordingVar(name, value);
@@ -318,11 +331,15 @@ function askForValue(var_name, requestText) {
 	setRecordingVarIfUndefined(var_name, null);
 	doAppend(RequestVarValue);
 	chrome.runtime.sendMessage({action: 'varChanged'});
-	console.log(requestText);
+}
+
+function changeVarName(fromName, toName) {
+	setRecordingVar(toName, getRecordingVar(fromName));
+	removeRecordingVar(fromName);
+	chrome.runtime.sendMessage({action: 'varChanged'});
 }
 
 function setTemporaryValue(var_name, value) {
-	currentRecording.vars[var_name] = value;
 	setRecordingVar(var_name, value);
 
 	chrome.runtime.sendMessage({action: 'varChanged'});

@@ -16,6 +16,22 @@ function requestStop() {
 	});
 }
 
+function changeVarName(fromName, toName) {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'change_var_name', from: fromName, to: toName}, function(response) {
+			resolve(response);
+		});
+	});
+}
+
+function changeVarValue(varName, value) {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'change_var_value', name: varName, value: value}, function(response) {
+			resolve(response);
+		});
+	});
+}
+
 function requestStart() {
 	return getSelectedTab().then(function(tab) {
 		return new Promise(function(resolve, reject) {

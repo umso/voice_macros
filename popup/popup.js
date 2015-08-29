@@ -10,7 +10,6 @@ $(function() {
 	});
 
 	$('#createCommand').on('click', requestStart);
-	$('#stop_recording').on('click', requestStop);
 });
 
 function updateHeight() {
@@ -24,9 +23,10 @@ function updateHeight() {
 function enterRecordingState() {
 	return new Promise(function(resolve) {
 		$('#introduction_card').hide();
-		$('#recording_card, #actions_card').show();
+		$('#variables_card, #actions_card').show();
 
 		$('#actionDisplay').actionDisplay();
+		$('#variables_card').variableListDisplay();
 		$('#macroName').macroName();
 
 		updateHeight();
@@ -40,11 +40,12 @@ function enterIdleState() {
 	return new Promise(function(resolve) {
 		if(wasRecording) {
 			$('#actionDisplay').actionDisplay("destroy");
+			$('#variables_card').variableListDisplay("destroy");
 			$('#macroName').macroName("destroy");
 		}
 
 		$('#introduction_card').show();
-		$('#recording_card, #actions_card').hide();
+		$('#variables_card, #actions_card').hide();
 
 		updateHeight();
 		resolve();

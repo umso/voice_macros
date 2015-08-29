@@ -93,3 +93,38 @@
     /*color: #AAA;*/
     border-radius: 2px;
 }
+
+.vc-var {
+    font-size: 0.9em;
+    font-weight: lighter;
+    color: #666;
+    margin: 5px;
+}
+
+.vc-var > .var-name {
+    font-weight: bold;
+    color: black;
+    background-color: #AAA;
+    border-bottom-left-radius: 10px;
+    border-top-left-radius: 10px;
+    padding: 4px;
+    border: 2px solid #AAA;
+}
+
+.vc-var > .var-value {
+    font-weight: normal;
+    color: black;
+    padding: 4px;
+    border: 2px solid #AAA;
+    border-bottom-right-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.mdl-card#variables_card {
+    min-height: initial;
+}
+
+#variables_card .variable-display {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}

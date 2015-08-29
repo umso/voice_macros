@@ -7,6 +7,7 @@
         <script type='text/javascript' src='vendor/jquery-ui-1.11.4.custom/jquery-ui.min.js'></script>
         <script type='text/javascript' src='vendor/mdl/material.min.js'></script>
         <script type='text/javascript' src='../eventCodes.js'></script>
+        <script type='text/javascript' src='variables.js'></script>
         <script type='text/javascript' src='widgets.js'></script>
         <script type='text/javascript' src='macroName.js'></script>
         <script type='text/javascript' src='actionDisplay.js'></script>
@@ -33,18 +34,7 @@
                 </a>
             </div>
         </div>
-        <div style='display: none;' id='recording_card' class='mdl-card mdl-shadow--2dp recording-card'>
-            <div class='mdl-card__title'>
-                <h2 class='mdl-card__title-text'>Recording</h2>
-            </div>
-            <div class='mdl-card__supporting-text'>
-                Voice Commander is currently recording your actions in Chrome (such as clicks and keypresses).
-                These actions will help write an automated command script. They will not be shared. <br />
-            </div>
-            <a id='stop_recording' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
-                I'm Done
-            </a>
-        </div>
+        <div style='display: none;' id='variables_card' class='mdl-card mdl-shadow--2dp recording-card'></div>
         <div style='display: none;' id='actions_card' class='mdl-card mdl-shadow--2dp'>
             <div class='mdl-card__title'>
                 <h2 id='macroName' class='mdl-card__title-text'></h2>
