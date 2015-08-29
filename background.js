@@ -7,16 +7,22 @@ var currentRecording,
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
-	if (action === 'start') {
+	if (action === 'request_start') {
 		doStart(request.tab_id);
 	} else if(action === 'get_status') {
 		sendResponse(doGetStatus());
-	} else if(action === 'stop') {
+	} else if(action === 'request_stop') {
 		doStop();
 	} else if(action === 'append') {
 		doAppend(request.obj);
 	} else if(action === 'get_recording') {
 		sendResponse(doGetRecording());
+	} else if(action === 'get_variables') {
+		sendResponse(doGetVariables());
+	} else if(action === 'get_name') {
+		sendResponse(doGetName());
+	} else if(action === 'set_name') {
+		nameMacro(request.value);
 	}
 });
 
@@ -43,6 +49,7 @@ function addMacroRecordingCommands() {
 			"name this macro *name": nameMacro,
 			"all this macro *name": nameMacro,
 			"call this macro *name": nameMacro,
+			"call does macro *name": nameMacro,
 			"call this mac *name": nameMacro,
 			"call this microbe *name": nameMacro,
 			"call is macro *name": nameMacro,
@@ -60,12 +67,13 @@ function addMacroRecordingCommands() {
 			":var is this": setVarValueToSelection,
 			"this is :var": setVarValueToSelection,
 			"read this (aloud)": onRead,
-			"read this out loud": onRead
-			"respond with this": onRead
-		});
-
-		annyang.addCallback('resultNoMatch', function() {
-			console.log(arguments);
+			"read this out loud": onRead,
+			"respond with this": onRead,
+			"read (this) (back) to (the) user": onRead,
+			"ask the user for :var": askForValue,
+			"ask the user for :var (as) (and) *requestText": askForValue,
+			"for now set :var to *value": setTemporaryValue,
+			"for now set :var as *value": setTemporaryValue
 		});
 
 		resolve(rv);
@@ -83,7 +91,6 @@ function addCoreCommands() {
 			return doStart(tab.id);
 		}).then(function() {
 			if(name) {
-				console.log(name);
 				nameMacro(name);
 			}
 		});
@@ -94,19 +101,17 @@ function addCoreCommands() {
 
 	return new Promise(function(resolve, reject) {
 		var rv = annyang.addCommands({
+			"create (a) (new) background (called) (named) *name": startRecording,
 			"create (a) (new) macro (called) (named) *name": startRecording,
 			"start (a) recording (a) (new) macro (called) (named) *name": startRecording,
-			"record (a) macro (called) (named) *name": startRecording,
+			"record (a) (new) macro (called) (named) *name": startRecording,
 			"create (a) new macro": startRecording,
 			"start (a) recording": startRecording,
 			"start recording (a) (new) macro": startRecording,
 			"stop (a) (this) recording": stopRecording,
 			"stop (this) macro": stopRecording,
-			"end (this) macro": stopRecording
-		});
-
-		annyang.addCallback('resultNoMatch', function() {
-			console.log(arguments);
+			"end (this) macro": stopRecording,
+			"end (this) recording": stopRecording
 		});
 
 		resolve(rv);
@@ -168,13 +173,20 @@ function requestSpeechPermission(ready) {
 }
 
 addCoreCommands().then(function() {
+	annyang.addCallback('resultNoMatch', function() {
+		console.log(arguments);
+	});
 	return beginSpeechRecognition();
 });
 
 var recordingPromise;
 function doStart(tab_id) {
 	if(!isRecording) {
-		currentRecording = [];
+		currentRecording = {
+			name: "My Command",
+			vars: {},
+			actions: []
+		};
 		isRecording = true;
 
 		updateIcon();
@@ -189,8 +201,8 @@ function doStart(tab_id) {
 		recordingPromise = getTab(recordingTabID).then(function(tab) {
 			startingURL = tab.url;
 		}).then(function() {
-			chrome.runtime.sendMessage({action: 'start'});
-			chrome.tabs.sendMessage(recordingTabID, { action: 'start' });
+			chrome.runtime.sendMessage({action: 'started'});
+			chrome.tabs.sendMessage(recordingTabID, { action: 'started' });
 		}).then(function() {
 			return addMacroRecordingCommands();
 		});
@@ -211,12 +223,6 @@ function addStartingURL(recording) {
 	if(recording.length === 0) {
 		needsStartingURL = true;
 	}
-
-	if(needsStartingURL) {
-		currentRecording.unshift({
-
-		});
-	}
 }
 
 function doStop() {
@@ -226,19 +232,31 @@ function doStop() {
 		addStartingURL(currentRecording);
 
 		updateIcon();
-		chrome.runtime.sendMessage({action: 'stop'});
+		chrome.runtime.sendMessage({action: 'stopped'});
 		chrome.contextMenus.remove(readContextMenu);
 		removeMacroRecordingCommands();
 	}
 }
 
 function doGetRecording() {
-	return currentRecording;
+	return currentRecording.actions;
+}
+
+function doGetVariables() {
+	return currentRecording.vars;
+}
+
+function doGetName() {
+	return currentRecording.name;
+}
+
+function doSetName(name) {
+	currentRecording.name = name;
 }
 
 function doAppend(action) {
 	action.uid = uid++;
-	currentRecording.push(action);
+	currentRecording.actions.push(action);
 }
 
 function getTab(tab_id) {
@@ -249,11 +267,26 @@ function getTab(tab_id) {
 	});
 }
 
+function getRecordingVar(name) {
+	return currentRecording.vars[name];
+}
+
+function setRecordingVar(name, value) {
+	currentRecording.vars[name] = value;
+}
+
+function setRecordingVarIfUndefined(name, value) {
+	if(!currentRecording.vars.hasOwnProperty(name)) {
+		setRecordingVar(name, value);
+	}
+}
+
 function onRead() {
 	chrome.tabs.sendMessage(recordingTabID, { action: 'tts_element' });
 }
 
 function nameMacro(name) {
+	doSetName(name);
 	chrome.runtime.sendMessage({action: 'nameMacro', name: name});
 }
 
@@ -275,4 +308,22 @@ function getSelectedTab() {
 			resolve(tab);
 		});
 	});
+}
+
+function askForValue(var_name, requestText) {
+	if(!requestText) {
+		requestText = "What is " + var_name;
+	}
+
+	setRecordingVarIfUndefined(var_name, null);
+	doAppend(RequestVarValue);
+	chrome.runtime.sendMessage({action: 'varChanged'});
+	console.log(requestText);
+}
+
+function setTemporaryValue(var_name, value) {
+	currentRecording.vars[var_name] = value;
+	setRecordingVar(var_name, value);
+
+	chrome.runtime.sendMessage({action: 'varChanged'});
 }

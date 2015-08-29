@@ -80,3 +80,16 @@
 .step:last-child {
     border-bottom: none;
 }
+
+.highlight0 { background-color: #B58900; } /* yellow */
+.highlight1 { background-color: #cb4b16; } /* orange */
+.highlight2 { background-color: #dc322f; } /* red    */
+.highlight3 { background-color: #859900; } /* green  */
+.highlight4 { background-color: #2aa198; } /* blue   */
+
+.highlight {
+    padding-left: 2px;
+    padding-right: 2px;
+    /*color: #AAA;*/
+    border-radius: 2px;
+}

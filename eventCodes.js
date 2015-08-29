@@ -23,7 +23,10 @@ var VOICE_COMMANDER_EVENT_CODE = {
 		MouseDrag: 21,
 		MouseDrop: 22,
 		KeyPress: 23,
-		ReadElement: 24
+		ReadElement: 24,
+		ClickWhen: 25,
+		SetVarValue: 26,
+		RequestVarValue: 27
 	},
 	VOICE_COMMANDER_BUTTON_CODE = {
 		LeftButton: 0,

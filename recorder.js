@@ -11,7 +11,7 @@
 //FOR A PARTICULAR PURPOSE.
 
 
-//TestRecorder - a javascript library to support browser test recording. It
+//VoiceCommander - a javascript library to support browser test recording. It
 //is designed to be as cross-browser compatible as possible and to promote
 //loose coupling with the user interface, making it easier to evolve the UI
 //and experiment with alternative interfaces.
@@ -26,8 +26,8 @@
 //Contact Brian Lloyd (brian@zope.com) with questions or comments.
 //---------------------------------------------------------------------------
 
-if (typeof(TestRecorder) == "undefined") {
-    TestRecorder = {};
+if (typeof(VoiceCommander) == "undefined") {
+    VoiceCommander = {};
 }
 
 //---------------------------------------------------------------------------
@@ -49,38 +49,25 @@ if (typeof(TestRecorder) == "undefined") {
 
 //---------------------------------------------------------------------------
 
-if (typeof(TestRecorder.Browser) == "undefined") {
-    TestRecorder.Browser = {};
+if (typeof(VoiceCommander.Browser) == "undefined") {
+    VoiceCommander.Browser = {};
 }
 
-TestRecorder.Browser.captureEvent = function(wnd, name, func) {
+VoiceCommander.Browser.captureEvent = function(wnd, name, func) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.captureEvents(Event[name.toUpperCase()]);
     wnd["on" + lname] = func;
 }
 
-TestRecorder.Browser.releaseEvent = function(wnd, name, func) {
+VoiceCommander.Browser.releaseEvent = function(wnd, name, func) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.releaseEvents(Event[name.toUpperCase()]);
     wnd["on" + lname] = null;
 }
 
-TestRecorder.Browser.getSelection = function(wnd) {
-    var doc = wnd.document;
-    if (wnd.getSelection) {
-        return wnd.getSelection() + '';
-    } else if (doc.getSelection) {
-        return doc.getSelection() + '';
-    } else if (doc.selection && doc.selection.createRange) {
-        return doc.selection.createRange().text + '';
-    } else {
-        return '';
-    }
-};
-
-TestRecorder.Browser.windowHeight = function(wnd) {
+VoiceCommander.Browser.windowHeight = function(wnd) {
     var doc = wnd.document;
     if (wnd.innerHeight) {
         return wnd.innerHeight;
@@ -93,7 +80,7 @@ TestRecorder.Browser.windowHeight = function(wnd) {
     }
 };
 
-TestRecorder.Browser.windowWidth = function(wnd) {
+VoiceCommander.Browser.windowWidth = function(wnd) {
     var doc = wnd.document;
     if (wnd.innerWidth) {
         return wnd.innerWidth;
@@ -143,7 +130,7 @@ TestRecorder.Browser.windowWidth = function(wnd) {
 
 //---------------------------------------------------------------------------
 
-TestRecorder.Event = function(e) {
+VoiceCommander.Event = function(e) {
     this.event = e || window.event;
 };
 
@@ -219,14 +206,11 @@ var BUTTON_CODE = VOICE_COMMANDER_BUTTON_CODE,
             return 0;
         }
     };
-}(TestRecorder.Event));
-
-
-
+}(VoiceCommander.Event));
 
 //---------------------------------------------------------------------------
-//TestCase -- this class contains the interesting events that happen in
-//the course of a test recording and provides some testcase metadata.
+//Macro -- this class contains the interesting events that happen in
+//the course of a test recording and provides some Macro metadata.
 
 //Attributes:
 
@@ -237,8 +221,7 @@ var BUTTON_CODE = VOICE_COMMANDER_BUTTON_CODE,
 
 //---------------------------------------------------------------------------
 
-TestRecorder.TestCase = function(title) {
-    this.title = title || "Test Case";
+VoiceCommander.Macro = function() {
     // maybe some items are already stored in the background
     // but we do not need them here anyway
     this.items = [];
@@ -260,7 +243,7 @@ TestRecorder.TestCase = function(title) {
         this.items[this.items.length - 1] = o;
         chrome.runtime.sendMessage({action: "poke", obj: o});
     };
-}(TestRecorder.TestCase));
+}(VoiceCommander.Macro));
 
 
 //---------------------------------------------------------------------------
@@ -271,7 +254,7 @@ TestRecorder.TestCase = function(title) {
 //information at the time of the event.
 //---------------------------------------------------------------------------
 
-TestRecorder.ElementInfo = function(element) {
+VoiceCommander.ElementInfo = function(element) {
     this.action = element.action;
     this.method = element.method;
     this.href = element.href;
@@ -420,336 +403,68 @@ TestRecorder.ElementInfo = function(element) {
 
         return selector;
     }
-}(TestRecorder.ElementInfo));
+}(VoiceCommander.ElementInfo));
 
-TestRecorder.DocumentEvent = function(type, target) {
+VoiceCommander.DocumentEvent = function(type, target) {
     this.type = type;
     this.url = target.URL;
     this.title = target.title;
 }
 
-TestRecorder.ElementEvent = function(type, target, text) {
+VoiceCommander.ElementEvent = function(type, target, options) {
     this.type = type;
-    this.info = new TestRecorder.ElementInfo(target);
-    this.text = text || recorder.strip(contextmenu.innertext(target));
+    this.info = new VoiceCommander.ElementInfo(target);
+    for(var key in options) {
+        if(options.hasOwnProperty(key)) {
+            var value = options[key];
+            this[key] = value;
+        }
+    }
 }
 
-TestRecorder.CommentEvent = function(text) {
+VoiceCommander.SelectionEvent = function(selection) {
+    var range = selection.getRangeAt(0);
+    this.startContainerInfo = new VoiceCommander.ElementInfo(range.startContainer);
+    this.endContainerInfo = new VoiceCommander.ElementInfo(range.endContainer);
+    this.commonAncestorContainer = new VoiceCommander.ElementInfo(range.commonAncestorContainer);
+    this.startOffset = range.startOffset;
+    this.endOffset = range.endOffset;
+}
+
+VoiceCommander.CommentEvent = function(text) {
     this.type = EVENT_CODE.Comment;
     this.text = text;
 }
 
-TestRecorder.KeyEvent = function(target, text) {
+VoiceCommander.KeyEvent = function(target, text) {
     this.type = EVENT_CODE.KeyPress;
-    this.info = new TestRecorder.ElementInfo(target);
+    this.info = new VoiceCommander.ElementInfo(target);
     this.text = text;
 }
 
-TestRecorder.MouseEvent = function(type, target, x, y) {
+VoiceCommander.MouseEvent = function(type, target, x, y) {
     this.type = type;
-    this.info = new TestRecorder.ElementInfo(target);
+    this.info = new VoiceCommander.ElementInfo(target);
     this.x = x;
     this.y = y;
-    this.text = recorder.strip(contextmenu.innertext(target));
 }
 
-TestRecorder.ScreenShotEvent = function() {
+VoiceCommander.ScreenShotEvent = function() {
     this.type = EVENT_CODE.ScreenShot;
 }
 
-TestRecorder.OpenURLEvent = function(url) {
+VoiceCommander.OpenURLEvent = function(url) {
     this.type = EVENT_CODE.OpenUrl;
     this.url = url;
     this.width = window.innerWidth;
     this.height = window.innerHeight;
 }
 
-TestRecorder.PageLoadEvent = function(url) {
+VoiceCommander.PageLoadEvent = function(url) {
     this.type = EVENT_CODE.OpenUrl;
     this.url = url;
     this.viaBack = back
 }
-
-//---------------------------------------------------------------------------
-//ContextMenu -- this class is responsible for managing the right-click
-//context menu that shows appropriate checks for targeted elements.
-
-//All methods and attributes are private to this implementation.
-//---------------------------------------------------------------------------
-
-TestRecorder.ContextMenu = function() {
-    this.selected = null;
-    this.target = null;
-    this.window = null;
-    this.visible = false;
-    this.over = false;
-    this.menu = null;
-};
-
-contextmenu = new TestRecorder.ContextMenu();
-
-(function(My) {
-    var proto = My.prototype;
-
-    proto.build = function(t, x, y) {
-        var d = recorder.window.document;
-        var b = d.getElementsByTagName("body").item(0);
-        var menu = d.createElement("div");
-
-        // Needed to deal with various cross-browser insanities...
-        menu.setAttribute("style", "backgroundColor:#ffffff;color:#000000;border:1px solid #000000;padding:2px;position:absolute;display:none;top:" + y + "px;left:" + x + "px;border:1px;z-index:10000;");
-
-        menu.style.backgroundColor="#ffffff";
-        menu.style.color="#000000";
-        menu.style.border = "1px solid #000000";
-        menu.style.padding="2px";
-        menu.style.position = "absolute";
-        menu.style.display = "none";
-        menu.style.zIndex = "10000";
-        menu.style.top = y.toString();
-        menu.style.left = x.toString();
-        menu.onmouseover=contextmenu.onmouseover;
-        menu.onmouseout=contextmenu.onmouseout;
-
-        var selected = TestRecorder.Browser.getSelection(recorder.window).toString();
-
-        if (t.width && t.height) {
-            menu.appendChild(this.item("Check Image Src", this.checkImgSrc));
-        } else if (t.type == "text" || t.type == "textarea") {
-            menu.appendChild(this.item("Check Text Value", this.checkValue));
-            menu.appendChild(this.item("Check Enabled", this.checkEnabled));
-            menu.appendChild(this.item("Check Disabled", this.checkDisabled));
-        } else if (selected && (selected != "")) {
-            this.selected = recorder.strip(selected);
-            menu.appendChild(this.item("Check Text Appears On Page",
-                    this.checkTextPresent));
-        } else if (t.href) {
-            menu.appendChild(this.item("Check Link Text", this.checkText));
-            menu.appendChild(this.item("Check Link Href", this.checkHref));
-        } else if (t.selectedIndex || t.type == "option") {
-            var name = "Check Selected Value";
-            if (t.type != "select-one") {
-                name = name + "s";
-            }
-            menu.appendChild(this.item(name, this.checkSelectValue));
-            menu.appendChild(this.item("Check Select Options",
-                    this.checkSelectOptions));
-            menu.appendChild(this.item("Check Enabled", this.checkEnabled));
-            menu.appendChild(this.item("Check Disabled", this.checkDisabled));
-        } else if (t.type == "button" || t.type == "submit") {
-            menu.appendChild(this.item("Check Button Text", this.checkText));
-            menu.appendChild(this.item("Check Button Value", this.checkValue));
-            menu.appendChild(this.item("Check Enabled", this.checkEnabled));
-            menu.appendChild(this.item("Check Disabled", this.checkDisabled));
-        } else if (t.value) {
-            menu.appendChild(this.item("Check Value", this.checkValue));
-            menu.appendChild(this.item("Check Enabled", this.checkEnabled));
-            menu.appendChild(this.item("Check Disabled", this.checkDisabled));
-        } else {
-            menu.appendChild(this.item("Check Page Location", this.checkPageLocation));
-            menu.appendChild(this.item("Check Page Title", this.checkPageTitle));
-            menu.appendChild(this.item("Screenshot", this.doScreenShot));
-        }
-
-        menu.appendChild(this.item("Cancel", this.cancel));
-
-        b.insertBefore(menu, b.firstChild);
-        return menu;
-    };
-
-    proto.item = function(text, func) {
-        var doc = recorder.window.document;
-        var div = doc.createElement("div");
-        var txt = doc.createTextNode(text);
-        div.setAttribute("style", "padding:6px;border:1px solid #ffffff;");
-        div.style.border = "1px solid #ffffff";
-        div.style.padding = "6px";
-        div.appendChild(txt);
-        div.onmouseover = this.onitemmouseover;
-        div.onmouseout = this.onitemmouseout;
-        div.onclick = func;
-        return div;
-    };
-
-    proto.show = function(e) {
-        if (this.menu) {
-            this.hide();
-        }
-        var wnd = recorder.window;
-        var doc = wnd.document;
-        this.target = e.target();
-        TestRecorder.Browser.captureEvent(wnd, "mousedown", this.onmousedown);
-
-        var wh = TestRecorder.Browser.windowHeight(wnd);
-        var ww = TestRecorder.Browser.windowWidth(wnd);
-        var x = e.posX();
-        var y = e.posY();
-        if ((ww >= 0) && ((ww - x) < 100)) {
-            x = x - 100;
-        }
-        if ((wh >= 0) && ((wh - y) < 100)) {
-            y = y - 100;
-        }
-        var menu = this.build(e.target(), x, y);
-        this.menu = menu;
-        menu.style.display = "";
-        this.visible = true;
-        return;
-    };
-
-    proto.hide = function() {
-        var wnd = recorder.window;
-        TestRecorder.Browser.releaseEvent(wnd, "mousedown", this.onmousedown);
-        var d = wnd.document;
-        var b = d.getElementsByTagName("body").item(0);
-        this.menu.style.display = "none" ;
-        b.removeChild(this.menu);
-        this.target = null;
-        this.visible = false;
-        this.over = false;
-        this.menu = null;
-    };
-
-    proto.onitemmouseover = function(e) {
-        this.style.backgroundColor = "#efefef";
-        this.style.border = "1px solid #c0c0c0";
-        return true;
-    };
-
-    proto.onitemmouseout = function(e) {
-        this.style.backgroundColor = "#ffffff";
-        this.style.border = "1px solid #ffffff";
-        return true;
-    };
-
-    proto.onmouseover = function(e) {
-        contextmenu.over = true;
-    };
-
-    proto.onmouseout = function(e) {
-        contextmenu.over = false;
-    };
-
-    proto.onmousedown = function(e) {
-        if(contextmenu.visible) {
-            if (!contextmenu.over) {
-                contextmenu.hide();
-            }
-            return true;
-        }
-        return false;
-    };
-
-    proto.record = function(o) {
-        recorder.testcase.append(o);
-        recorder.log(o.type);
-        contextmenu.hide();
-    };
-
-    proto.checkPageTitle = function() {
-        var doc = recorder.window.document;
-        var e = new TestRecorder.DocumentEvent(EVENT_CODE.CheckPageTitle, doc);
-        contextmenu.record(e);
-    };
-
-    proto.doScreenShot = function() {
-        var e = new TestRecorder.ScreenShotEvent();
-        contextmenu.record(e);
-    };
-
-    proto.checkPageLocation = function() {
-        var doc = recorder.window.document;
-        var e = new TestRecorder.DocumentEvent(EVENT_CODE.CheckPageLocation, doc);
-        contextmenu.record(e);
-    };
-
-    proto.checkValue = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckValue, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkValueContains = function() {
-        var s = contextmenu.selected;
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckValueContains, t, s);
-        contextmenu.selected = null;
-        contextmenu.record(e);
-    };
-
-    proto.innertext = function(e) {
-        var doc = recorder.window.document;
-        if (document.createRange) {
-            var r = recorder.window.document.createRange();
-            r.selectNodeContents(e);
-            return r.toString();
-        } else {
-            return e.innerText;
-        }
-    };
-
-    proto.checkText = function() {
-        var t = contextmenu.target;
-        var s = '';
-        if (t.type == 'button' || t.type == 'submit') {
-            s = t.value;
-        } else {
-            s = contextmenu.innertext(t);
-        }
-        s = recorder.strip(s);
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckText, t, s);
-        contextmenu.record(e);
-    };
-
-    proto.checkTextPresent = function() {
-        var t = contextmenu.target;
-        var s = contextmenu.selected;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckTextPresent, t, s);
-        contextmenu.selected = null;
-        contextmenu.record(e);
-    };
-
-    proto.checkHref = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckHref, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkEnabled = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckEnabled, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkDisabled = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckDisabled, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkSelectValue = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckSelectValue, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkSelectOptions = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckSelectOptions, t);
-        contextmenu.record(e);
-    };
-
-    proto.checkImgSrc = function() {
-        var t = contextmenu.target;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.CheckImageSrc, t);
-        contextmenu.record(e);
-    };
-
-    proto.cancel = function() {
-        contextmenu.hide();
-    };
-}(TestRecorder.ContextMenu));
-
 
 //---------------------------------------------------------------------------
 //Recorder -- a controller class that manages the recording of web browser
@@ -765,8 +480,8 @@ contextmenu = new TestRecorder.ContextMenu();
 
 //---------------------------------------------------------------------------
 
-TestRecorder.Recorder = function() {
-    this.testcase = new TestRecorder.TestCase();
+VoiceCommander.Recorder = function() {
+    this.macro = new VoiceCommander.Macro();
     this.logfunc = null;
     this.window = null;
     this.active = false;
@@ -776,7 +491,7 @@ TestRecorder.Recorder = function() {
 //one instance, and many of its methods are event handlers which need a
 //stable reference to the instance.
 
-recorder = new TestRecorder.Recorder();
+recorder = new VoiceCommander.Recorder();
 recorder.logfunc = function(msg) { console.log(msg); };
 
 (function(My) {
@@ -793,7 +508,6 @@ recorder.logfunc = function(msg) { console.log(msg); };
         var actualCode = '(' + function() {
             var overloadStopPropagation = Event.prototype.stopPropagation;
             Event.prototype.stopPropagation = function(){
-                console.log(this);
                 overloadStopPropagation.apply(this, arguments);
             };
         } + ')();';
@@ -813,15 +527,15 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 
     proto.open = function(url) {
-        var e = new TestRecorder.OpenURLEvent(url);
-        this.testcase.append(e);
+        var e = new VoiceCommander.OpenURLEvent(url);
+        this.macro.append(e);
         //this.log("open url: " + url);
     };
 
     proto.pageLoad = function() {
         var doc = recorder.window.document;
-        var e = new TestRecorder.DocumentEvent(EVENT_CODE.PageLoad, doc);
-        this.testcase.append(e);
+        var e = new VoiceCommander.DocumentEvent(EVENT_CODE.PageLoad, doc);
+        this.macro.append(e);
         //this.log("page loaded url: " + e.url);
     };
 
@@ -832,14 +546,14 @@ recorder.logfunc = function(msg) { console.log(msg); };
     proto.captureEvents = function() {
         var wnd = this.window;
         eventTypes.forEach(function(eventType) {
-            TestRecorder.Browser.captureEvent(wnd, eventType, this['on'+eventType]);
+            VoiceCommander.Browser.captureEvent(wnd, eventType, this['on'+eventType]);
         }.bind(this));
     };
 
     proto.releaseEvents = function() {
         var wnd = this.window;
         eventTypes.forEach(function(eventType) {
-            TestRecorder.Browser.releaseEvent(wnd, eventType, this['on'+eventType]);
+            VoiceCommander.Browser.releaseEvent(wnd, eventType, this['on'+eventType]);
         }.bind(this));
     };
 
@@ -853,22 +567,20 @@ recorder.logfunc = function(msg) { console.log(msg); };
         // If the context menu is visible, then the click is either over the
         // menu (selecting a check) or out of the menu (cancelling it) so we
         // always discard clicks that happen when the menu is visible.
-        if (!contextmenu.visible) {
-            var t = e.target();
-            if (t.href || (t.type && t.type == "submit") ||
-                    (t.type && t.type == "submit")) {
-                this.testcase.append(new TestRecorder.ElementEvent(EVENT_CODE.Click,e.target()));
-            } else {
-                recorder.testcase.append(
-                        new TestRecorder.MouseEvent(
-                                EVENT_CODE.Click, e.target(), e.posX(), e.posY()
-                        ));
-            }
+        var t = e.target();
+        if (t.href || (t.type && t.type == "submit") ||
+                (t.type && t.type == "submit")) {
+            this.macro.append(new VoiceCommander.ElementEvent(EVENT_CODE.Click, e.target()));
+        } else {
+            recorder.macro.append(
+                    new VoiceCommander.MouseEvent(
+                            EVENT_CODE.Click, e.target(), e.posX(), e.posY()
+                    ));
         }
     };
 
     proto.addComment = function(text) {
-        this.testcase.append(new TestRecorder.CommentEvent(text));
+        this.macro.append(new VoiceCommander.CommentEvent(text));
     };
 
     proto.check = function(e) {
@@ -896,8 +608,8 @@ recorder.logfunc = function(msg) { console.log(msg); };
 
             // if a new page has loaded, but there doesn't seem to be a reason why,
             // then we need to record the fact or the information will be lost
-            if (this.testcase.peek()) {
-                var last_event_type = this.testcase.peek().type;
+            if (this.macro.peek()) {
+                var last_event_type = this.macro.peek().type;
                 if (last_event_type != EVENT_CODE.OpenUrl &&
                         last_event_type != EVENT_CODE.Click &&
                         last_event_type != EVENT_CODE.Submit) {
@@ -913,56 +625,52 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 
     proto.onchange = function(e) {
-        var e = new TestRecorder.Event(e);
-        var v = new TestRecorder.ElementEvent(EVENT_CODE.Change, e.target());
-        recorder.testcase.append(v);
+        var e = new VoiceCommander.Event(e);
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Change, e.target());
+        recorder.macro.append(v);
         recorder.log("value changed: " + e.target().value);
     };
 
     proto.onselect = function(e) {
-        var e = new TestRecorder.Event(e);
+        var e = new VoiceCommander.Event(e);
         recorder.log("select: " + e.target());
     };
 
     proto.onsubmit = function(e) {
-        var e = new TestRecorder.Event(e);
+        var e = new VoiceCommander.Event(e);
         // We want to save the form element as the event target
         var t = e.target();
         while (t.parentNode && t.tagName != "FORM") {
             t = t.parentNode;
         }
-        var v = new TestRecorder.ElementEvent(EVENT_CODE.Submit, t);
-        recorder.testcase.append(v);
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Submit, t);
+        recorder.macro.append(v);
         recorder.log("submit: " + e.target());
     };
 
     proto.ondrag = function(e) {
-        var e = new TestRecorder.Event(e);
-        recorder.testcase.append(
-                new TestRecorder.MouseEvent(
+        var e = new VoiceCommander.Event(e);
+        recorder.macro.append(
+                new VoiceCommander.MouseEvent(
                         EVENT_CODE.MouseDrag, e.target(), e.posX(), e.posY()
                 ));
     };
     proto.onmousedown = function(e) {
-        if(!contextmenu.visible) {
-            var e = new TestRecorder.Event(e);
-            if (e.button() == BUTTON_CODE.LeftButton) {
-                recorder.testcase.append(
-                    new TestRecorder.MouseEvent(
-                            EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY()
-                    ));
-            }
+        var e = new VoiceCommander.Event(e);
+        if (e.button() == BUTTON_CODE.LeftButton) {
+            recorder.macro.append(
+                new VoiceCommander.MouseEvent(
+                        EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY()
+                ));
         }
     };
     proto.onmouseup = function(e) {
-        if(!contextmenu.visible) {
-            var e = new TestRecorder.Event(e);
-            if (e.button() == BUTTON_CODE.LeftButton) {
-                recorder.testcase.append(
-                        new TestRecorder.MouseEvent(
-                                EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY()
-                        ));
-            }
+        var e = new VoiceCommander.Event(e);
+        if (e.button() == BUTTON_CODE.LeftButton) {
+            recorder.macro.append(
+                    new VoiceCommander.MouseEvent(
+                            EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY()
+                    ));
         }
     };
     //The dance here between onclick and oncontextmenu requires a bit of
@@ -974,7 +682,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     //IE. In both cases, we need to prevent the default action for cmenu.
 
     proto.onclick = function(e) {
-        var e = new TestRecorder.Event(e);
+        var e = new VoiceCommander.Event(e);
 
         if (e.shiftkey()) {
             recorder.check(e);
@@ -996,7 +704,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 
     proto.oncontextmenu = function(e) {
-        var e = new TestRecorder.Event(e);
+        var e = new VoiceCommander.Event(e);
         recorder.check(e);
         e.stopPropagation();
         e.preventDefault();
@@ -1004,24 +712,15 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 
     proto.onkeypress = function(e) {
-        var e = new TestRecorder.Event(e);
-        if (e.shiftkey() && (e.keychar() == 'C')) {
-            // TODO show comment box here
-        }
-        if (e.shiftkey() && (e.keychar() == 'S')) {
-            recorder.testcase.append(new TestRecorder.ScreenShotEvent());
-            e.stopPropagation();
-            e.preventDefault();
-            return false;
-        }
+        var e = new VoiceCommander.Event(e);
 
-        var last = recorder.testcase.peek();
+        var last = recorder.macro.peek();
         if(last.type == EVENT_CODE.KeyPress) {
             last.text = last.text + e.keychar();
-            recorder.testcase.poke(last);
+            recorder.macro.poke(last);
         } else {
-            recorder.testcase.append(
-                new TestRecorder.KeyEvent(e.target(), e.keychar())
+            recorder.macro.append(
+                new VoiceCommander.KeyEvent(e.target(), e.keychar())
             );
         }
         return true;
@@ -1036,32 +735,33 @@ recorder.logfunc = function(msg) { console.log(msg); };
             this.logfunc(text);
         }
     };
-}(TestRecorder.Recorder));
+}(VoiceCommander.Recorder));
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var action = request.action;
-    if (action == "start") {
+    if (action == 'started') {
         recorder.start();
         sendResponse({});
-    } else if (action == "stop") {
+    } else if (action == 'stopped') {
         recorder.stop();
         sendResponse({});
     } else if (action === 'tts_element') {
         var selection = getSelection();
-        var t = selection.baseNode;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.ReadElement, t);
-        console.log(getSelection());
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection);
+        recorder.macro.append(e);
     } else if(action === 'clickWhen') {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.ClickWhen, element);
-        e.var_name = request.var_name;
-        e.value = request.value;
-        console.log(element);
+        var e = new VoiceCommander.ElementEvent(EVENT_CODE.ClickWhen, element, {
+            var_name: request.var_name,
+            value: request.value
+        });
+
+        recorder.macro.append(e);
     } else if(action === 'setVarValueToSelection') {
         var selection = getSelection();
-        var t = selection.baseNode;
-        var e = new TestRecorder.ElementEvent(EVENT_CODE.SetVarValue, t);
-        console.log(getSelection());
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection);
+
+        recorder.macro.append(e);
     } else {
         console.log(action);
         console.log(request);

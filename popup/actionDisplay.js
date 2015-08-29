@@ -7,10 +7,20 @@ $.widget('voice_commander.actionDisplay', {
 		this.itemDisplays = {};
 		this.refresh();
 		this.actionList = $('<div />').appendTo(this.element);
+
+		chrome.runtime.onMessage.addListener($.proxy(function(request, sender, sendResponse) {
+			var action = request.action;
+			if(action === 'append') {
+				this.refresh();
+			}
+		}, this));
 	},
 
 	_destroy: function() {
-
+		this.actionList.children().each(function(i, child) {
+			$(child).step('destroy').remove();
+		});
+		this.element.children().remove();
 	},
 
 	refresh: function() {
@@ -26,7 +36,6 @@ $.widget('voice_commander.actionDisplay', {
 					var display = this._getDisplay(action, index+1);
 					this.actionList.append(display);
 				}.bind(this));
-			} else {
 			}
 		}.bind(this));
 	},

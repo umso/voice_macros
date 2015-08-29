@@ -9,19 +9,26 @@ function renderCasper() {
 	});
 }
 
-function postStop() {
+function requestStop() {
 	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'stop'});
+		chrome.runtime.sendMessage({action: 'request_stop'});
 		resolve();
 	});
 }
 
-function postStart() {
+function requestStart() {
 	return getSelectedTab().then(function(tab) {
 		return new Promise(function(resolve, reject) {
-			chrome.runtime.sendMessage({action: 'start', tab_id: tab.id});
+			chrome.runtime.sendMessage({action: 'request_start', tab_id: tab.id});
 			resolve();
 		});
+	});
+}
+
+function postNewName(newName) {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'set_name', value: newName});
+		resolve();
 	});
 }
 
@@ -33,21 +40,31 @@ function getSelectedTab() {
 	});
 }
 
-function getCurrentRecording() {
-	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'get_recording'}, function(recording) {
-			resolve(recording);
-		});
-	});
-}
+var getCurrentRecording = fieldGetter('get_recording'),
+	getVariables = fieldGetter('get_variables'),
+	getName = fieldGetter('get_name'),
+	getStatus = fieldGetter('get_status');
 
-function getStatus() {
-	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'get_status'}, function(status) {
-			resolve(status);
+function fieldGetter(fieldName) {
+	return function() {
+		return new Promise(function(resolve, reject) {
+			chrome.runtime.sendMessage({action: fieldName}, function(response) {
+				resolve(response);
+			});
 		});
-	});
+	}
 }
+/*
+
+var HIGHLIGHTER_COLORS = ['E2FF00', 'FF8800', 'FF008E', '00FF00', '00CFFF'];
+function assignVariableColors(variables) {
+	for(var key in variables) {
+		if(variables.hasOwnProperty(key)) {
+
+		}
+	}
+}
+*/
 
 function downloadJSFile(data, name) {
 	downloadURI('data:text/javascript;charset=utf-8,' + encodeURIComponent(data), name);
