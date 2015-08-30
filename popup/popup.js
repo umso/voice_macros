@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		enterIdleState().then(function() {
 			return renderCasper();
 		}).then(function(casperScript) {
-			//downloadJSFile(casperScript, 'casper_script.js');
+			downloadJSFile(casperScript, 'casper_script.js');
 		});
 	} else if(action === 'append') { // handled by action display
 	} else if(action === 'nameMacro') { // handled by macroName

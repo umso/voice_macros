@@ -1,11 +1,10 @@
 function renderCasper() {
-	return getCurrentRecording().then(function(recording) {
-		return new Promise(function(resolve, reject) {
-			var dt = new CasperRenderer(document);
-			dt.items = recording;
-			dt.render(false);
-			resolve(dt.textContent);
-		});
+	return Promise.all([getCurrentRecording(), getName()]).then(function(info) {
+		var recording = info[0],
+			title = info[1];
+
+		var dt = new CasperRenderer(title, recording);
+		return dt.render();
 	});
 }
 
