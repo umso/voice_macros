@@ -125,3 +125,66 @@ $.widget("voice_commander.editableText", {
 										.focus();
 	}
 });
+
+
+var UniqueChildTracker = (function(My) {
+	var proto = My.prototype;
+
+	proto.setChildren = function(children) {
+		var unusedKeys = {},
+			childViews,
+			promises = [];
+
+		_.each(this.children, function(val, key) {
+			unusedKeys[key] = val;
+		})
+
+		childViews = _.map(children, function(child, key) {
+			var key = this.getKey(child, key),
+				childView = this.getChildView(key, child);
+
+			delete unusedKeys[key];
+
+			if(childView instanceof Promise) {
+				promises.push(childView);
+			}
+
+			return childView;
+		}, this);
+
+		_.each(_.keys(unusedKeys), function(key) {
+			delete this.children[key];
+		}, this);
+
+		return Promise.all(promises).then(function() {
+			return {
+				childViews: childViews,
+				toRemove: unusedKeys
+			};
+		});
+	};
+
+	proto.getChildView = function(key, child) {
+		if(this.children.hasOwnProperty(key)) {
+			return this.children[key];
+		} else {
+			var childView = this.createElement(child, key);
+			this.children[key] = childView;
+			return childView;
+		}
+	};
+
+	proto.destroy = function() {
+		delete this.getKey;
+		delete this.createElement;
+		delete this.children;
+	};
+
+	return My;
+}(function(createElement, getKey) {
+	this.createElement = createElement;
+	this.getKey = getKey || function(child, key) {
+		return key;
+	};
+	this.children = {};
+}));

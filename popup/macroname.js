@@ -1,6 +1,6 @@
 $.widget('voice_commander.macroName', {
 	options: {
-		name: "My Command"
+		name: ''
 	},
 	_create: function() {
 		this.element.editableText({
@@ -42,14 +42,13 @@ $.widget('voice_commander.macroName', {
 		return getVariables().then($.proxy(this._doGetDisplay, this, name));
 	},
 	_doGetDisplay: function(name, vars) {
-		console.log(name, vars);
 		var element = $('<span />');
 
 		if(name.trim()) {
 			var htmlValue = name;
 
 			$.each(vars, function(name, value) {
-				htmlValue = addHighlights(htmlValue, name, 0);
+				htmlValue = addHighlights(htmlValue, name, getVariableIndex(vars, name));
 			});
 
 			element.html(htmlValue);

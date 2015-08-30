@@ -29,6 +29,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	} else if(action === 'change_var_name') {
 		changeVarName(request.from, request.to);
 		sendResponse(doGetVariables());
+	} else if(action === 'add_var') {
+		addVariable();
+		sendResponse(doGetVariables());
+	} else if(action === 'remove_var') {
+		removeRecordingVar(request.name);
+		sendResponse(doGetVariables());
+		chrome.runtime.sendMessage({action: 'varChanged'});
 	}
 });
 
@@ -190,10 +197,7 @@ function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = {
 			name: "My Command",
-			vars: {
-				x: 'x value',
-				y: 'y value'
-			},
+			vars: { },
 			actions: []
 		};
 		isRecording = true;
@@ -276,6 +280,29 @@ function getTab(tab_id) {
 	});
 }
 
+var GREEKLETTERS = ['alpha', 'beta', 'gamma', 'delta',
+		'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa',
+		'lamda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho',
+		'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega'];
+
+function addVariable() {
+	var j = 0;
+	var name;
+
+	outer: while(true) {
+		var appendix = (j<1) ? '' : ('_'+j);
+
+		for(var i = 0; i<GREEKLETTERS.length; i++) {
+			name = GREEKLETTERS[i] + appendix;
+
+			if(!hasRecordingVar(name)) {
+				break outer;
+			}
+		}
+	}
+	return setRecordingVar(name, 'value');
+}
+
 function getRecordingVar(name) {
 	return currentRecording.vars[name];
 }
@@ -289,9 +316,13 @@ function removeRecordingVar(name) {
 }
 
 function setRecordingVarIfUndefined(name, value) {
-	if(!currentRecording.vars.hasOwnProperty(name)) {
+	if(!hasRecordingVar(name)) {
 		setRecordingVar(name, value);
 	}
+}
+
+function hasRecordingVar(name) {
+	return currentRecording.vars.hasOwnProperty(name);
 }
 
 function onRead() {

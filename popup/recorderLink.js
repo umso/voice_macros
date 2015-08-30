@@ -16,6 +16,20 @@ function requestStop() {
 	});
 }
 
+function addVariable() {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'add_var'}, function(response) {
+			resolve(response);
+		});
+	});
+}
+function removeVariable(name) {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'remove_var', name: name}, function(response) {
+			resolve(response);
+		});
+	});
+}
 function changeVarName(fromName, toName) {
 	return new Promise(function(resolve, reject) {
 		chrome.runtime.sendMessage({action: 'change_var_name', from: fromName, to: toName}, function(response) {
@@ -91,4 +105,11 @@ function downloadURI(uri, name) {
 	link.download = name;
 	link.href = uri;
 	link.click();
+}
+
+var numIndicies = 5;
+function getVariableIndex(vars, varName) {
+	var names = _.keys(vars).sort(),
+		index = names.indexOf(varName);
+	return index % numIndicies;
 }

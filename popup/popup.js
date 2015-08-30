@@ -10,6 +10,7 @@ $(function() {
 	});
 
 	$('#createCommand').on('click', requestStart);
+	$('#stopRecording').on('click', requestStop);
 });
 
 function updateHeight() {
@@ -25,9 +26,9 @@ function enterRecordingState() {
 		$('#introduction_card').hide();
 		$('#variables_card, #actions_card').show();
 
+		$('#macroName').macroName();
 		$('#actionDisplay').actionDisplay();
 		$('#variables_card').variableListDisplay();
-		$('#macroName').macroName();
 
 		updateHeight();
 
@@ -66,6 +67,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	} else if(action === 'set_name') {
 	} else if(action === 'request_start') {
 	} else if(action === 'request_stop') {
+	} else if(action === 'varChanged') {
 	} else {
 		console.log(action);
 	}

@@ -41,12 +41,24 @@
     color: #AAA;
 }
 
-#actions_card {
-	background-color: #ECF0F1
+#variables_card {
+    /*
+	background-color: #ECF0F1;
+    background-color: #2C3E50;
+    */
 }
 
-#actions_card > .mdl-card__title {
-    background-color: #3498DB;
+.instructions {
+	background-color: #ECF0F1;
+}
+
+#actions_card {
+    background-color: white;
+}
+
+#variables_card > .mdl-card__title {
+    /*background-color: #3498DB;*/
+	background-color: #E74C3C;
     color: white;
 }
 
@@ -81,50 +93,88 @@
     border-bottom: none;
 }
 
-.highlight0 { background-color: #B58900; } /* yellow */
-.highlight1 { background-color: #cb4b16; } /* orange */
-.highlight2 { background-color: #dc322f; } /* red    */
-.highlight3 { background-color: #859900; } /* green  */
-.highlight4 { background-color: #2aa198; } /* blue   */
+.highlight0 {
+    background-color:   #E2FF00;
+} /* yellow */
+.highlight1 {
+    background-color:   #FF9900;
+} /* orange */
+.highlight2 {
+    background-color:   #FF99FF;
+} /* red */
+.highlight3 {
+    background-color:   #00FF00;
+} /* green */
+.highlight4 {
+    background-color:   #00CFFF;
+} /* blue */
 
 .highlight {
     padding-left: 2px;
     padding-right: 2px;
     /*color: #AAA;*/
     border-radius: 2px;
+    color: black;
 }
 
 .vc-var {
-    font-size: 0.9em;
+    font-size: 0.8em;
     font-weight: lighter;
-    color: #666;
     margin: 5px;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .vc-var > .var-name {
-    font-weight: bold;
-    color: black;
-    background-color: #AAA;
+    font-weight: normal;
     border-bottom-left-radius: 10px;
     border-top-left-radius: 10px;
     padding: 4px;
-    border: 2px solid #AAA;
 }
 
 .vc-var > .var-value {
-    font-weight: normal;
-    color: black;
+    font-weight: lighter;
+    color: white;
     padding: 4px;
-    border: 2px solid #AAA;
     border-bottom-right-radius: 10px;
     border-top-right-radius: 10px;
 }
 
-.mdl-card#variables_card {
-    min-height: initial;
+.mdl-card {
+    min-height: 30px;
 }
 
 #variables_card .variable-display {
     padding-top: 10px;
     padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    color: #DDD;
+}
+
+#variables_card.instructions {
+	background-color: #ECF0F1;
+}
+
+#variables_card {
+	background-color: #AD4236;
+}
+
+#createCommand, #stopRecording {
+    border-top: 1px solid #EEE;
+}
+
+.variableInstructions {
+    font-weight: lighter;
+    padding: 0px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.variable-display .mdl-button {
+    font-size: 0.7em;
+    color: white;
+}
+.instructions .variable-display .mdl-button {
+	color: #E74C3C;
 }
