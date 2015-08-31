@@ -176,7 +176,8 @@ function CasperRenderer(title, recording) {
             .stmt("//========================================================", 0)
             .space()
             .stmt("var casper = require('casper').create(),", 0)
-            .stmt("    x = require('casper').selectXPath;", 0)
+            .stmt("    x = require('casper').selectXPath,", 0)
+            .stmt("    say = require('say');", 0)
 			.space();
     };
 
@@ -206,7 +207,18 @@ function CasperRenderer(title, recording) {
 			.stmt("}", 1)
 			.stmt("});")
 			.space()
-			.stmt("casper.start(" + url + ");");
+			.stmt("function speak(text) {")
+			.stmt("return new Promise(function(resolve, reject) {", 1)
+			.stmt("say.speak(null, text, function() {", 2)
+			.stmt("resolve();", 3)
+			.stmt("});", 2)
+			.stmt("});", 1)
+			.stmt("}")
+			.space()
+			.stmt("casper.start(" + url + ");")
+			.space()
+			.stmt("say('hello world').then(function() { return say('goodbye world'); });")
+			;
     };
 
     proto.openUrl = function(item) {
@@ -369,10 +381,11 @@ function CasperRenderer(title, recording) {
 
         this.stmt('casper.then(function() {');
         for (var i=0; i < lines.length; i++) {
-            this.stmt('    test.comment("'+lines[i]+'");');
+            this.stmt('test.comment("'+lines[i]+'");', 1);
         }
         this.stmt('});');
     };
+	/*
 
     proto.checkPageTitle = function(item) {
         var title = this.pyrepr(item.title, true);
@@ -456,7 +469,6 @@ function CasperRenderer(title, recording) {
     };
 
     proto.checkSelectOptions = function(item) {
-        this.stmt('/* TODO */');
     };
 
     proto.checkImageSrc = function(item) {
@@ -473,5 +485,6 @@ function CasperRenderer(title, recording) {
             .stmt('test.assertExists(' + selector + ');', 3)
             .stmt('});');
     };
+	*/
 
 } (CasperRenderer));
