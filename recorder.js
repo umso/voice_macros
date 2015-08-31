@@ -542,7 +542,6 @@ recorder.logfunc = function(msg) { console.log(msg); };
     var eventTypes = ['contextmenu', 'drag', 'mousedown',
                         'mouseup', 'click', 'change',
                         'keypress', 'select', 'submit'];
-    eventTypes = ['click'];
     proto.captureEvents = function() {
         var wnd = this.window;
         eventTypes.forEach(function(eventType) {

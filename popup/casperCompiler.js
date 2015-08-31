@@ -216,7 +216,7 @@ function CasperRenderer(title, recording) {
         // if the user apparently hit the back button, render the event as such
         if (url == history[history.length - 2]) {
             this.stmt('casper.then(function() {')
-                .stmt('    this.back();')
+                .stmt('this.back();', 1)
                 .stmt('});');
 
             history.pop();
@@ -342,12 +342,9 @@ function CasperRenderer(title, recording) {
         var text = item.text.replace('\n','').replace('\r', '\\r');
 
         this.stmt('casper.waitForSelector("' + this.getControl(item) + '",', 1)
-            .stmt('function success() {', 2)
+            .stmt('function () {', 2)
             .stmt('this.sendKeys("' + this.getControl(item) + '", "' + text + '");', 3)
-            .stmt('},', 2)
-            .stmt('function fail() {', 2)
-            .stmt('test.assertExists("' + this.getControl(item) + '");', 3)
-            .stmt('});', 1);
+            .stmt('});', 2);
     };
 
     proto.submit = function(item) {
