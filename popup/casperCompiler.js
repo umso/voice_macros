@@ -203,6 +203,8 @@ function CasperRenderer(title, recording) {
 
     proto.startUrl = function(item) {
 		var url = this.pyrepr(this.rewriteUrl(item.url));
+		this.stmt("spooky.start(" + url + ");")
+		/*
 
 		this.stmt("casper.options.viewportSize = {width: "+item.width+", height: "+item.height+"};", 0)
 			.space()
@@ -226,6 +228,7 @@ function CasperRenderer(title, recording) {
 			.space()
 			.stmt("say('hello world').then(function() { return say('goodbye world'); });")
 			;
+			*/
     };
 
     proto.openUrl = function(item) {
