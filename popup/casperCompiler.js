@@ -99,15 +99,10 @@ function CasperRenderer(title, recording) {
 
     var cc = VOICE_COMMANDER_EVENT_CODE;
 
-    proto.render = function(with_xy) {
+	proto.renderBody = function(with_xy) {
         this.with_xy = !!with_xy;
         var etypes = VOICE_COMMANDER_EVENT_CODE;
-        /*
-        this.document.open();
-        this.document.writeln('<button id="casperbox-button">Run it on Casperbox</button>');
-        this.document.write("<" + "pre" + ">");
-        */
-        this.writeHeader();
+
         var last_down = null;
         var forget_click = false;
 
@@ -163,27 +158,39 @@ function CasperRenderer(title, recording) {
         if (item.type == etypes.Comment)
             this.space();
         }
+	};
 
-        this.writeFooter();
-
-		return this.textContent;
+    proto.render = function(with_xy) {
+		return	this.writeHeader().then($.proxy(function() {
+					return this.renderBody();
+				}, this)).then($.proxy(function() {
+					return this.writeFooter();
+				}, this)).then($.proxy(function() {
+					return this.textContent;
+				}, this));
     };
 
     proto.writeHeader = function() {
-        var date = new Date();
-        this.stmt("//========================================================", 0)
-            .stmt("// Casper generated " + date, 0)
-            .stmt("//========================================================", 0)
-            .space()
-            .stmt("var casper = require('casper').create(),", 0)
-            .stmt("    x = require('casper').selectXPath,", 0)
-            .stmt("    say = require('say');", 0)
-			.space();
+		return getFile('casper_template/casper_header.js').then($.proxy(function(headerContent) {
+	        var date = new Date();
+
+	        this.stmt("//========================================================", 0)
+	            .stmt("// Casper generated " + date, 0)
+	            .stmt("//========================================================", 0)
+	            .space();
+
+			if(headerContent) {
+				this.writeln(headerContent);
+			}
+		}, this));
     };
 
     proto.writeFooter = function() {
-        this.space()
-            .stmt("casper.run();");
+		return getFile('casper_template/casper_footer.js').then($.proxy(function(footerContent) {
+			if(footerContent) {
+				this.writeln(footerContent);
+			}
+		}, this));
     };
 
     proto.rewriteUrl = function(url) {
@@ -487,4 +494,14 @@ function CasperRenderer(title, recording) {
     };
 	*/
 
+	function getFile(filename) {
+		return new Promise(function(resolve, reject) {
+			$.ajax({
+				url: chrome.extension.getURL(filename),
+				dataType: 'text'
+			}).done(function(data) {
+				resolve(data);
+			});
+		});
+	}
 } (CasperRenderer));

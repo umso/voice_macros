@@ -1,7 +1,0 @@
-{
-	"name": "voice_commander",
-	"dependencies": {
-		"say": "latest",
-		"spooky": "latest"
-	}
-}
