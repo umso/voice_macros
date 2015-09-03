@@ -582,6 +582,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
         this.macro.append(new VoiceCommander.CommentEvent(text));
     };
 
+/*
     proto.check = function(e) {
         // This method is called by our low-level event handler when the mouse
         // is clicked in check mode. Its job is decide whether the click is
@@ -598,6 +599,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
             recorder.log('check link == "' + target.text + '"');
         }
     };
+    */
 
     proto.onpageload = function() {
         if (this.active) {
@@ -684,14 +686,14 @@ recorder.logfunc = function(msg) { console.log(msg); };
         var e = new VoiceCommander.Event(e);
 
         if (e.shiftkey()) {
-            recorder.check(e);
+            //recorder.check(e);
             e.stopPropagation();
             e.preventDefault();
             return false;
         }
 
         if (e.button() == BUTTON_CODE.RightButton) {
-            recorder.check(e);
+            //recorder.check(e);
             return true;
         } else if (e.button() == BUTTON_CODE.LeftButton) {
             recorder.clickaction(e);
@@ -704,7 +706,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
 
     proto.oncontextmenu = function(e) {
         var e = new VoiceCommander.Event(e);
-        recorder.check(e);
+        //recorder.check(e);
         e.stopPropagation();
         e.preventDefault();
         return false;

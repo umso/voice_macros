@@ -15,6 +15,7 @@ function CasperRenderer(title, recording) {
 
 (function(My) {
     var proto = My.prototype;
+    var EC = VOICE_COMMANDER_EVENT_CODE;
 
     proto.writeln = function(txt) {
         this.textContent += txt + '\n';
@@ -24,6 +25,8 @@ function CasperRenderer(title, recording) {
     proto.stmt = function(text, indent) {
         var output = '';
         indent = indent || 0;
+
+		indent += 2; // We are inside two nested loops, so add two tabs
 
         for(var i = 0; i<indent*4; i++) {
             output += ' ';
@@ -72,91 +75,83 @@ function CasperRenderer(title, recording) {
     };
 
     var d = {};
-    d[VOICE_COMMANDER_EVENT_CODE.OpenUrl] = "openUrl";
-    d[VOICE_COMMANDER_EVENT_CODE.Click] = "click";
+    d[EC.OpenUrl] = "openUrl";
+    d[EC.Click] = "click";
     //d[EventTypes.Change] = "change";
-    d[VOICE_COMMANDER_EVENT_CODE.Comment] = "comment";
-    d[VOICE_COMMANDER_EVENT_CODE.Submit] = "submit";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckPageTitle] = "checkPageTitle";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckPageLocation] = "checkPageLocation";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckTextPresent] = "checkTextPresent";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckValue] = "checkValue";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckText] = "checkText";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckHref] = "checkHref";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckEnabled] = "checkEnabled";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckDisabled] = "checkDisabled";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckSelectValue] = "checkSelectValue";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckSelectOptions] = "checkSelectOptions";
-    d[VOICE_COMMANDER_EVENT_CODE.CheckImageSrc] = "checkImageSrc";
-    d[VOICE_COMMANDER_EVENT_CODE.PageLoad] = "pageLoad";
-    d[VOICE_COMMANDER_EVENT_CODE.ScreenShot] = "screenShot";
-    /*d[VOICE_COMMANDER_EVENT_CODE.MouseDown] = "mousedown";
-    d[VOICE_COMMANDER_EVENT_CODE.MouseUp] = "mouseup"; */
-    d[VOICE_COMMANDER_EVENT_CODE.MouseDrag] = "mousedrag";
-    d[VOICE_COMMANDER_EVENT_CODE.KeyPress] = "keypress";
+    d[EC.Comment] = "comment";
+    d[EC.Submit] = "submit";
+    d[EC.CheckPageTitle] = "checkPageTitle";
+    d[EC.CheckPageLocation] = "checkPageLocation";
+    d[EC.CheckTextPresent] = "checkTextPresent";
+    d[EC.CheckValue] = "checkValue";
+    d[EC.CheckText] = "checkText";
+    d[EC.CheckHref] = "checkHref";
+    d[EC.CheckEnabled] = "checkEnabled";
+    d[EC.CheckDisabled] = "checkDisabled";
+    d[EC.CheckSelectValue] = "checkSelectValue";
+    d[EC.CheckSelectOptions] = "checkSelectOptions";
+    d[EC.CheckImageSrc] = "checkImageSrc";
+    d[EC.PageLoad] = "pageLoad";
+    d[EC.ScreenShot] = "screenShot";
+    /*d[EC.MouseDown] = "mousedown";
+    d[EC.MouseUp] = "mouseup"; */
+    d[EC.MouseDrag] = "mousedrag";
+    d[EC.KeyPress] = "keypress";
+    d[EC.ReadElement] = "readelement";
+    d[EC.ClickWhen] = "clickwhen";
+    d[EC.SetVarValue] = "setvarvalue";
+    d[EC.RequestVarValue] = "requestvarvalue";
 
     proto.dispatch = d;
 
-    var cc = VOICE_COMMANDER_EVENT_CODE;
+	proto.getItem = function(index) {
+		return this.items[index];
+	};
+
+	proto.numItems = function() {
+		return this.items.length;
+	};
+
+	proto.getType = function(item) {
+		return item ? item.type : false;
+	};
+
+	proto.getIndexType = function(index) {
+		return this.getType(this.getItem(index));
+	}
 
 	proto.renderBody = function(with_xy) {
         this.with_xy = !!with_xy;
-        var etypes = VOICE_COMMANDER_EVENT_CODE;
-
         var last_down = null;
         var forget_click = false;
 
-        for (var i=0; i < this.items.length; i++) {
-        var item = this.items[i];
-        if (item.type == etypes.Comment) {
-            this.space();
-        }
+        for (var i=0; i < this.numItems(); i++) {
+	        var item = this.getItem(i),
+				type = this.getType(item);
 
-        if(i===0) {
-            if(item.type!=etypes.OpenUrl) {
-                this.writeln("ERROR: the recorded sequence does not start with a url openning.");
-            } else {
-                this.startUrl(item);
-                continue;
-            }
-        }
-
-        // remember last MouseDown to identify drag
-        if(item.type === etypes.MouseDown) {
-            last_down = this.items[i];
-            continue;
-        }
-        if(item.type==etypes.MouseUp && last_down) {
-            if(last_down.x == item.x && last_down.y == item.y) {
-                forget_click = false;
-                continue;
-            } else {
-                item.before = last_down;
-                this[this.dispatch[etypes.MouseDrag]](item);
-                last_down = null;
-                forget_click = true;
-                continue;
-            }
-        }
-
-        if(item.type==etypes.Click && forget_click) {
-            forget_click = false;
-            continue;
-        }
-
-        // we do not want click due to user checking actions
-        if(i>0 && item.type==etypes.Click &&
-            ((this.items[i-1].type>=etypes.CheckPageTitle && this.items[i-1].type<=etypes.CheckImageSrc) || this.items[i-1].type==etypes.ScreenShot)) {
-
-            continue;
-        }
-
-        if (this.dispatch[item.type]) {
-            this[this.dispatch[item.type]](item);
-        }
-
-        if (item.type == etypes.Comment)
-            this.space();
+	        if(i===0) {
+	            if(type!=EC.OpenUrl) {
+	                this.writeln("//ERROR: the recorded sequence does not start with a url openning.");
+	            } else {
+	                this.startUrl(item);
+	            }
+	        } else if(type === EC.MouseDown) {
+		        // remember last MouseDown to identify drag
+	            last_down = item;
+	        } else if(type==EC.MouseUp && last_down) {
+	            if(last_down.x == item.x && last_down.y == item.y) {
+	                forget_click = false;
+	            } else {
+	                item.before = last_down;
+	                this[this.dispatch[EC.MouseDrag]](item);
+	                last_down = null;
+	                forget_click = true;
+	            }
+	        } else if(type === EC.Click && forget_click) {
+	            forget_click = false;
+	        } else if (this.dispatch[type]) {
+	            this[this.dispatch[type]](item, i);
+	        }
         }
 	};
 
@@ -203,32 +198,10 @@ function CasperRenderer(title, recording) {
 
     proto.startUrl = function(item) {
 		var url = this.pyrepr(this.rewriteUrl(item.url));
-		this.stmt("spooky.start(" + url + ");")
-		/*
 
-		this.stmt("casper.options.viewportSize = {width: "+item.width+", height: "+item.height+"};", 0)
-			.space()
-			.stmt("casper.on('page.error', function(msg, trace) {")
-			.stmt("this.echo('Error: ' + msg, 'ERROR');", 1)
-			.stmt("for(var i=0; i < trace.length; i++) {", 1)
-			.stmt("var step = trace[i];", 2)
-			.stmt("this.echo('   ' + step.file + ' (line ' + step.line + ')', 'ERROR');", 2)
-			.stmt("}", 1)
-			.stmt("});")
-			.space()
-			.stmt("function speak(text) {")
-			.stmt("return new Promise(function(resolve, reject) {", 1)
-			.stmt("say.speak(null, text, function() {", 2)
-			.stmt("resolve();", 3)
-			.stmt("});", 2)
-			.stmt("});", 1)
-			.stmt("}")
-			.space()
-			.stmt("casper.start(" + url + ");")
-			.space()
-			.stmt("say('hello world').then(function() { return say('goodbye world'); });")
-			;
-			*/
+		this.space()
+			.stmt("spooky.start(" + url + ");")
+			.space();
     };
 
     proto.openUrl = function(item) {
@@ -237,14 +210,14 @@ function CasperRenderer(title, recording) {
 
         // if the user apparently hit the back button, render the event as such
         if (url == history[history.length - 2]) {
-            this.stmt('casper.then(function() {')
+            this.stmt('spooky.then(function() {')
                 .stmt('this.back();', 1)
                 .stmt('});');
 
             history.pop();
             history.pop();
         } else {
-            this.stmt("casper.thenOpen(" + url + ");");
+            this.stmt("spooky.thenOpen(" + url + ");");
         }
     };
 
@@ -309,7 +282,7 @@ function CasperRenderer(title, recording) {
 
     proto.mousedrag = function(item) {
         if(this.with_xy) {
-            this.stmt('casper.then(function() {')
+            this.stmt('spooky.then(function() {')
                 .stmt('this.mouse.down('+ item.before.x + ', '+ item.before.y +');', 1)
                 .stmt('this.mouse.move('+ item.x + ', '+ item.y +');', 1)
                 .stmt('this.mouse.up('+ item.x + ', '+ item.y +');', 1)
@@ -320,7 +293,7 @@ function CasperRenderer(title, recording) {
     proto.click = function(item) {
         var tag = item.info.tagName.toLowerCase();
         if(this.with_xy && !(tag == 'a' || tag == 'input' || tag == 'button')) {
-            this.stmt('casper.then(function() {')
+            this.stmt('spooky.then(function() {')
                 .stmt('this.mouse.click('+ item.x + ', '+ item.y +');', 1)
                 .stmt('});');
         } else {
@@ -339,10 +312,11 @@ function CasperRenderer(title, recording) {
                 selector = '"' + item.info.selector + '"';
             }
 
-            this.stmt('casper.waitForSelector('+ selector + ',')
+            this.stmt('spooky.waitForSelector('+ selector + ',')
                 .stmt('function () {', 1)
                 .stmt('this.click('+ selector + ');', 2)
-                .stmt('}),', 1);
+                .stmt('});', 1)
+				.space();
         }
     };
 
@@ -360,13 +334,18 @@ function CasperRenderer(title, recording) {
         }
     };
 
-    proto.keypress = function(item) {
+    proto.keypress = function(item, index) {
         var text = item.text.replace('\n','').replace('\r', '\\r');
+		if(this.getIndexType(index+1) === EC.Change) {
+			var changeItem = this.getItem(index+1);
+			text = changeItem.info.value;
+		}
 
-        this.stmt('casper.waitForSelector("' + this.getControl(item) + '",', 1)
-            .stmt('function () {', 2)
-            .stmt('this.sendKeys("' + this.getControl(item) + '", "' + text + '");', 3)
-            .stmt('});', 2);
+        this.stmt('spooky.waitForSelector("' + this.getControl(item) + '",')
+            .stmt('function () {', 1)
+            .stmt('this.sendKeys("' + this.getControl(item) + '", "' + text + '");', 2)
+            .stmt('});', 1)
+			.space();
     };
 
     proto.submit = function(item) {
@@ -379,22 +358,44 @@ function CasperRenderer(title, recording) {
         // wait 1 second is not the ideal solution, but will be enough most
         // part of time. For slow pages, an assert before capture will make
         // sure evrything is properly loaded before screenshot.
-        this.stmt('casper.wait(1000);')
-            .stmt('casper.then(function() {')
-            .stmt('    this.captureSelector("screenshot'+this.screen_id+'.png", "html");')
-            .stmt('});');
+        this.stmt('spooky.wait(1000);')
+            .stmt('spooky.then(function() {')
+            .stmt('this.captureSelector("screenshot'+this.screen_id+'.png", "html");', 1)
+            .stmt('});')
+			.space();
         this.screen_id = this.screen_id + 1;
     };
 
     proto.comment = function(item) {
         var lines = item.text.split('\n');
 
-        this.stmt('casper.then(function() {');
+        this.space();
         for (var i=0; i < lines.length; i++) {
-            this.stmt('test.comment("'+lines[i]+'");', 1);
-        }
-        this.stmt('});');
+			this.stmt('// ' + lines[i])
+		}
+		this.space();
     };
+
+	// read the content of an element out loud
+	proto.readelement = function(item, index) {
+
+	};
+
+	// click on some condition of a variable value
+	proto.clickwhen = function(item, index) {
+
+	};
+
+	// set the value of a variable to a text selection
+	proto.setvarvalue = function(item, index) {
+
+	};
+
+	// ask, through voice, for the value of a variable
+	proto.requestvarvalue = function(item, index) {
+
+	};
+
 	/*
 
     proto.checkPageTitle = function(item) {

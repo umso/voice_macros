@@ -17,6 +17,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		doAppend(request.obj);
 	} else if(action === 'get_recording') {
 		sendResponse(doGetRecording());
+		console.log(doGetRecording());
 	} else if(action === 'get_variables') {
 		sendResponse(doGetVariables());
 	} else if(action === 'get_name') {
