@@ -14,7 +14,7 @@ spooky.on('log', function (log) {
     //if (log.space === 'spooky.server' || log.space === 'remote' || log.space === 'phantom') {
         //console.log(log.message.replace(/ \- .*/, ''));
     //}
-    console.log(log.message.replace(/ \- .*/, ''));
+    console.log(log.message ? log.message.replace(/ \- .*/, '') : log);
 });
 
 spooky.on('say', function (toSay) {

@@ -1,5 +1,6 @@
 (function() {
 
+var TEXT_NODE_TYPE = 3;
 //----------------------------------------------------------------------------
 //Copyright (c) 2005 Zope Foundation and Contributors.
 
@@ -255,6 +256,10 @@ VoiceCommander.Macro = function() {
 //---------------------------------------------------------------------------
 
 VoiceCommander.ElementInfo = function(element) {
+    if(element.nodeType === TEXT_NODE_TYPE) {
+        element = element.parentNode;
+    }
+
     this.action = element.action;
     this.method = element.method;
     this.href = element.href;
@@ -422,8 +427,10 @@ VoiceCommander.ElementEvent = function(type, target, options) {
     }
 }
 
-VoiceCommander.SelectionEvent = function(selection) {
+VoiceCommander.SelectionEvent = function(type, selection) {
+    this.type = type;
     var range = selection.getRangeAt(0);
+    console.log(range);
     this.startContainerInfo = new VoiceCommander.ElementInfo(range.startContainer);
     this.endContainerInfo = new VoiceCommander.ElementInfo(range.endContainer);
     this.commonAncestorContainer = new VoiceCommander.ElementInfo(range.commonAncestorContainer);
@@ -539,7 +546,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
         //this.log("page loaded url: " + e.url);
     };
 
-    var eventTypes = ['contextmenu', 'drag', 'mousedown',
+    var eventTypes = ['drag', 'mousedown',
                         'mouseup', 'click', 'change',
                         'keypress', 'select', 'submit'];
     proto.captureEvents = function() {
@@ -703,6 +710,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
         e.preventDefault();
         return false;
     };
+    /*
 
     proto.oncontextmenu = function(e) {
         var e = new VoiceCommander.Event(e);
@@ -711,6 +719,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
         e.preventDefault();
         return false;
     };
+    */
 
     proto.onkeypress = function(e) {
         var e = new VoiceCommander.Event(e);
@@ -749,6 +758,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     } else if (action === 'tts_element') {
         var selection = getSelection();
         var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection);
+        console.log(e);
         recorder.macro.append(e);
     } else if(action === 'clickWhen') {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);

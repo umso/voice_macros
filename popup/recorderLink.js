@@ -1,3 +1,7 @@
+var RUNNER_PROTOCOL = 'http'
+	RUNNER_HOST = 'localhost',
+	RUNNER_PORT = 3000;
+
 function renderCasper() {
 	return Promise.all([getCurrentRecording(), getName()]).then(function(info) {
 		var recording = info[0],
@@ -82,6 +86,19 @@ function fieldGetter(fieldName) {
 			});
 		});
 	}
+}
+
+function uploadScript(scriptInfo) {
+	return new Promise(function(resolve, reject) {
+		$.ajax({
+			url: RUNNER_PROTOCOL + '://' + RUNNER_HOST + ':' + RUNNER_PORT + '/uploadScript',
+			method: 'POST',
+			data: scriptInfo,
+			success: function(response) {
+				resolve(response);
+			}
+		});
+	});
 }
 /*
 

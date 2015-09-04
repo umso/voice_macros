@@ -3,6 +3,10 @@
 // test format.
 // ---------------------------------------------------------------------------
 
+var LOG_LEVEL = {
+	INFO: 1
+};
+
 function CasperRenderer(title, recording) {
 	this.title = title;
 	this.items = recording;
@@ -16,6 +20,7 @@ function CasperRenderer(title, recording) {
 (function(My) {
     var proto = My.prototype;
     var EC = VOICE_COMMANDER_EVENT_CODE;
+	var TAB_SIZE = 4;
 
     proto.writeln = function(txt) {
         this.textContent += txt + '\n';
@@ -26,15 +31,30 @@ function CasperRenderer(title, recording) {
         var output = '';
         indent = indent || 0;
 
-		indent += 2; // We are inside two nested loops, so add two tabs
+		indent += 2; // We are inside a function body so add an extra tabs
 
-        for(var i = 0; i<indent*4; i++) {
+        for(var i = 0; i<indent*TAB_SIZE; i++) {
             output += ' ';
         }
         output += text;
 
         return this.writeln(output);
     };
+
+	proto.emitStatement = function(type, body, indent) {
+		return this.stmt('this.emit(' + this.pyrepr(type) + ', ' + body + ')', indent);
+	};
+
+	proto.logStatement = function(message, logLevel, indent) {
+		return this.emitStatement('log', JSON.stringify({
+			message: message,
+			level: logLevel
+		}), indent);
+	};
+
+	proto.sayStatement = function(message, indent) {
+		return this.emitStatement('say', message, indent);
+	};
 
     proto.cont = function(text) {
         return this.writeln('   ... ' + text);
@@ -131,7 +151,7 @@ function CasperRenderer(title, recording) {
 
 	        if(i===0) {
 	            if(type!=EC.OpenUrl) {
-	                this.writeln("//ERROR: the recorded sequence does not start with a url openning.");
+	                this.stmt("//ERROR: the recorded sequence does not start with a url openning.");
 	            } else {
 	                this.startUrl(item);
 	            }
@@ -157,11 +177,16 @@ function CasperRenderer(title, recording) {
 
     proto.render = function(with_xy) {
 		return	this.writeHeader().then($.proxy(function() {
-					return this.renderBody();
+					return this.renderBody(with_xy);
 				}, this)).then($.proxy(function() {
 					return this.writeFooter();
 				}, this)).then($.proxy(function() {
 					return this.textContent;
+				}, this).then($.proxy(function(scriptBody) {
+					return {
+						title: this.title
+						body: scriptBody
+					};
 				}, this));
     };
 
@@ -169,9 +194,9 @@ function CasperRenderer(title, recording) {
 		return getFile('casper_template/casper_header.js').then($.proxy(function(headerContent) {
 	        var date = new Date();
 
-	        this.stmt("//========================================================", 0)
-	            .stmt("// Casper generated " + date, 0)
-	            .stmt("//========================================================", 0)
+	        this.stmt("//========================================================", -10)
+	            .stmt("// Casper generated " + date, -10)
+	            .stmt("//========================================================", -10)
 	            .space();
 
 			if(headerContent) {
@@ -200,7 +225,9 @@ function CasperRenderer(title, recording) {
 		var url = this.pyrepr(this.rewriteUrl(item.url));
 
 		this.space()
-			.stmt("spooky.start(" + url + ");")
+			.stmt("spooky.start(" + url + ", function() {")
+			.logStatement('Started at ' + url + '', LOG_LEVEL.INFO, 1)
+			.stmt("});")
 			.space();
     };
 
@@ -230,39 +257,22 @@ function CasperRenderer(title, recording) {
         return s.replace(/^\s*/, '').replace(/\s*$/, '').replace(/\s+/g, ' ');
     };
 
-    proto.getControl = function(item) {
-        var type = item.info.type;
-        var tag = item.info.tagName.toLowerCase();
+    proto.getControl = function(info) {
+        var type = info.type;
+        var tag = info.tagName.toLowerCase();
         var selector;
 
-        if ((type == "submit" || type == "button") && item.info.value) {
-            selector = tag+'[type='+type+'][value='+this.pyrepr(this.normalizeWhitespace(item.info.value))+']';
-        } else if (item.info.name) {
-            selector = tag+'[name='+this.pyrepr(item.info.name)+']';
-        } else if (item.info.id) {
-            selector = tag+'#'+item.info.id;
+        if ((type == "submit" || type == "button") && info.value) {
+            selector = tag+'[type='+type+'][value='+this.pyrepr(this.normalizeWhitespace(info.value))+']';
+        } else if (info.name) {
+            selector = tag+'[name='+this.pyrepr(info.name)+']';
+        } else if (info.id) {
+            selector = tag+'#'+info.id;
         } else {
-            selector = item.info.selector;
+            selector = info.selector;
         }
 
         return selector;
-    };
-
-    proto.getControlXPath = function(item) {
-        var type = item.info.type;
-        var way;
-
-        if ((type == "submit" || type == "button") && item.info.value){
-            way = '@value=' + this.pyrepr(this.normalizeWhitespace(item.info.value));
-        } else if (item.info.name) {
-            way = '@name=' + this.pyrepr(item.info.name);
-        } else if (item.info.id) {
-            way = '@id=' + this.pyrepr(item.info.id);
-        } else {
-            way = 'TODO';
-        }
-
-        return way;
     };
 
     proto.getLinkXPath = function(item) {
@@ -294,7 +304,8 @@ function CasperRenderer(title, recording) {
         var tag = item.info.tagName.toLowerCase();
         if(this.with_xy && !(tag == 'a' || tag == 'input' || tag == 'button')) {
             this.stmt('spooky.then(function() {')
-                .stmt('this.mouse.click('+ item.x + ', '+ item.y +');', 1)
+                .stmt('this.mouse.click(' + item.x + ', ' + item.y + ');', 1)
+				.logStatement('Clicked (' + item.x + ', ' + item.y + ')', LOG_LEVEL.INFO, 1)
                 .stmt('});');
         } else {
             var selector;
@@ -306,7 +317,7 @@ function CasperRenderer(title, recording) {
                     selector = item.info.selector;
                 }
             } else if (tag == 'input' || tag == 'button') {
-                selector = this.getFormSelector(item) + this.getControl(item);
+                selector = this.getFormSelector(item) + this.getControl(item.info);
                 selector = '"' + selector + '"';
             } else {
                 selector = '"' + item.info.selector + '"';
@@ -315,6 +326,7 @@ function CasperRenderer(title, recording) {
             this.stmt('spooky.waitForSelector('+ selector + ',')
                 .stmt('function () {', 1)
                 .stmt('this.click('+ selector + ');', 2)
+				.logStatement('Clicked ' + selector, LOG_LEVEL.INFO, 2)
                 .stmt('});', 1)
 				.space();
         }
@@ -335,15 +347,18 @@ function CasperRenderer(title, recording) {
     };
 
     proto.keypress = function(item, index) {
-        var text = item.text.replace('\n','').replace('\r', '\\r');
+        var text = item.text.replace('\n','').replace('\r', '\\r'),
+			selector = this.getControl(item.info);
+
 		if(this.getIndexType(index+1) === EC.Change) {
 			var changeItem = this.getItem(index+1);
 			text = changeItem.info.value;
 		}
 
-        this.stmt('spooky.waitForSelector("' + this.getControl(item) + '",')
+        this.stmt('spooky.waitForSelector("' + selector + '",')
             .stmt('function () {', 1)
-            .stmt('this.sendKeys("' + this.getControl(item) + '", "' + text + '");', 2)
+            .stmt('this.sendKeys("' + selector + '", "' + text + '");', 2)
+			.logStatement('Sent Keys ' + selector, LOG_LEVEL.INFO, 2)
             .stmt('});', 1)
 			.space();
     };
@@ -378,7 +393,16 @@ function CasperRenderer(title, recording) {
 
 	// read the content of an element out loud
 	proto.readelement = function(item, index) {
+		var commonAncestorControl = this.getControl(item.commonAncestorContainer);
 
+		this.space()
+			.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.stmt('function() {', 1)
+			.sayStatement('this.fetchText("'+commonAncestorControl+'")', 2)
+			.logStatement('Read ' + commonAncestorControl, LOG_LEVEL.INFO, 2)
+            .stmt('});', 1)
+
+			.space();
 	};
 
 	// click on some condition of a variable value
@@ -398,6 +422,22 @@ function CasperRenderer(title, recording) {
 
 	/*
 
+    proto.getControlXPath = function(item) {
+        var type = item.info.type;
+        var way;
+
+        if ((type == "submit" || type == "button") && item.info.value){
+            way = '@value=' + this.pyrepr(this.normalizeWhitespace(item.info.value));
+        } else if (item.info.name) {
+            way = '@name=' + this.pyrepr(item.info.name);
+        } else if (item.info.id) {
+            way = '@id=' + this.pyrepr(item.info.id);
+        } else {
+            way = 'TODO';
+        }
+
+        return way;
+    };
     proto.checkPageTitle = function(item) {
         var title = this.pyrepr(item.title, true);
         this.stmt('casper.then(function() {', 1)
