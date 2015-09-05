@@ -37,6 +37,7 @@ function enterRecordingState() {
 		resolve();
 	});
 }
+
 function enterIdleState() {
 	return new Promise(function(resolve) {
 		if(wasRecording) {
@@ -52,6 +53,7 @@ function enterIdleState() {
 		resolve();
 	});
 }
+
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	var action = request.action;
 	if(action === 'started') {
