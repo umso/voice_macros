@@ -182,9 +182,9 @@ function CasperRenderer(title, recording) {
 					return this.writeFooter();
 				}, this)).then($.proxy(function() {
 					return this.textContent;
-				}, this).then($.proxy(function(scriptBody) {
+				}, this)).then($.proxy(function(scriptBody) {
 					return {
-						title: this.title
+						title: this.title,
 						body: scriptBody
 					};
 				}, this));
