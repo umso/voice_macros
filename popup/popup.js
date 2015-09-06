@@ -10,8 +10,10 @@ $(function() {
 	});
 
 	$('#createCommand').on('click', function() {
-		return requestStart().then(function() {
+		return requestStart().then(function(status) {
 			return enterRecordingState();
+		}).then(function() {
+			$('#macroName').macroName('startEditing');
 		});
 	});
 	$('#stopRecording').on('click', function() {
@@ -41,16 +43,16 @@ function updateHeight() {
 
 function enterRecordingState() {
 	return new Promise(function(resolve) {
+		wasRecording = true;
+
 		$('#introduction_card').hide();
 		$('#variables_card, #actions_card').show();
 
-		$('#macroName').macroName();
 		$('#actionDisplay').actionDisplay();
 		$('#variables_card').variableListDisplay();
 
+		$('#macroName')	.macroName();
 		updateHeight();
-
-		wasRecording = true;
 
 		resolve();
 	});
@@ -72,16 +74,13 @@ function enterIdleState() {
 	});
 }
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	var action = request.action;
-	if(action === 'started') {
-		enterRecordingState();
-	} else if(action === 'stopped') {
-		enterIdleState().then(function() {
-			return renderCasper();
-		}).then(function(casperScript) {
-			//downloadJSFile(casperScript.body, 'casper_script.js');
-			return uploadScript(casperScript);
-		});
-	}
-});
+function handleTestCompilation() {
+	var cmd_str = '{"specifiedName":"my command","vars":{"x":null},"actions":[{"type":0,"url":"http://umich.edu/","width":1044,"height":543,"uid":1},{"type":27,"var_name":"x","request_text":"what is x","uid":2}],"varNames":{},"computedName":"my command"}';
+	var info = JSON.parse(cmd_str);
+	var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
+	dt.render().then(function(js_file) {
+		return uploadScript(js_file);
+	});
+}
+
+//handleTestCompilation();

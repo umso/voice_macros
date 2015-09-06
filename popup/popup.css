@@ -160,8 +160,17 @@
 	background-color: #AD4236;
 }
 
-#createCommand, #stopRecording {
+#createCommand {
     border-top: 1px solid #EEE;
+}
+
+#stopRecording {
+    color: white;
+	background-color: #E74C3C;
+}
+
+#stopRecording:hover {
+	background-color: #AD4236;
 }
 
 .variableInstructions {

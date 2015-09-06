@@ -82,6 +82,10 @@ $.widget("voice_commander.editableText", {
 		}
 	},
 
+	startEditing: function() {
+		return this._startEditing();
+	},
+
 	_showDisplay: function() {
 		var getDisplay = this.option('getDisplay'),
 			value = this.option('value');

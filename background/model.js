@@ -96,7 +96,7 @@ function addStartingURL(recording) {
 function doStart(tab_id) {
 	if(!isRecording) {
 		currentRecording = {
-			specifiedName: "My Command",
+			specifiedName: "my command",
 			vars: { },
 			actions: [],
 			varNames: false,
@@ -256,7 +256,11 @@ function askForValue(var_name, requestText) {
 	}
 
 	setRecordingVarIfUndefined(var_name, null);
-	doAppend(RequestVarValue);
+	doAppend({
+		type: VOICE_COMMANDER_EVENT_CODE.RequestVarValue,
+		var_name: var_name,
+		request_text: requestText
+	});
 	notifyVarChanged();
 }
 

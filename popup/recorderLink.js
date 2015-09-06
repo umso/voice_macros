@@ -17,8 +17,9 @@ function renderCasper() {
 
 function requestStop() {
 	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'request_stop'});
-		resolve();
+		chrome.runtime.sendMessage({action: 'request_stop'}, function(status) {
+			resolve(status);
+		});
 	});
 }
 
@@ -59,8 +60,9 @@ function changeVarValue(varName, value) {
 function requestStart() {
 	return getSelectedTab().then(function(tab) {
 		return new Promise(function(resolve, reject) {
-			chrome.runtime.sendMessage({action: 'request_start', tab_id: tab.id});
-			resolve();
+			chrome.runtime.sendMessage({action: 'request_start', tab_id: tab.id}, function(status) {
+				resolve(status);
+			});
 		});
 	});
 }

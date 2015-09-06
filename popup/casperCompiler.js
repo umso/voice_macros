@@ -56,6 +56,9 @@ function CasperRenderer(title, recording) {
 	proto.sayStatement = function(message, indent) {
 		return this.emitStatement('say', message, indent);
 	};
+	proto.voicePromptStatement = function(message, indent) {
+		return this.emitStatement('voicePrompt', this.pyrepr(message), indent);
+	};
 
     proto.cont = function(text) {
         return this.writeln('   ... ' + text);
@@ -230,6 +233,7 @@ function CasperRenderer(title, recording) {
 
 		this.space()
 			.stmt("spooky.start(" + url + ", function() {")
+			.stmt("this.env = {};", 1)
 			.logStatement('Started at ' + url + '', LOG_LEVEL.INFO, 1)
 			.stmt("});")
 			.space();
@@ -304,6 +308,25 @@ function CasperRenderer(title, recording) {
         }
     };
 
+	proto.getElementSelector = function(item) {
+        var selector;
+        if (tag == 'a') {
+            var xpath_selector = this.getLinkXPath(item);
+            if(xpath_selector) {
+                selector = 'x("//a['+xpath_selector+']")';
+            } else {
+                selector = item.info.selector;
+            }
+        } else if (tag == 'input' || tag == 'button') {
+            selector = this.getFormSelector(item) + this.getControl(item.info);
+            selector = '"' + selector + '"';
+        } else {
+            selector = '"' + item.info.selector + '"';
+        }
+
+		return selector;
+	};
+
     proto.click = function(item) {
         var tag = item.info.tagName.toLowerCase();
         if(this.with_xy && !(tag == 'a' || tag == 'input' || tag == 'button')) {
@@ -312,20 +335,7 @@ function CasperRenderer(title, recording) {
 				.logStatement('Clicked (' + item.x + ', ' + item.y + ')', LOG_LEVEL.INFO, 1)
                 .stmt('});');
         } else {
-            var selector;
-            if (tag == 'a') {
-                var xpath_selector = this.getLinkXPath(item);
-                if(xpath_selector) {
-                    selector = 'x("//a['+xpath_selector+']")';
-                } else {
-                    selector = item.info.selector;
-                }
-            } else if (tag == 'input' || tag == 'button') {
-                selector = this.getFormSelector(item) + this.getControl(item.info);
-                selector = '"' + selector + '"';
-            } else {
-                selector = '"' + item.info.selector + '"';
-            }
+			var selector = this.getElementSelector(item);
 
             this.stmt('spooky.waitForSelector('+ selector + ',')
                 .stmt('function () {', 1)
@@ -405,23 +415,59 @@ function CasperRenderer(title, recording) {
 			.sayStatement('this.fetchText("'+commonAncestorControl+'")', 2)
 			.logStatement('Read ' + commonAncestorControl, LOG_LEVEL.INFO, 2)
             .stmt('});', 1)
-
 			.space();
 	};
 
 	// click on some condition of a variable value
 	proto.clickwhen = function(item, index) {
+		var varName = item.var_name,
+			value = item.value;
 
+		var selector = this.getElementSelector(item);
+
+        this.space()
+			.stmt('spooky.then(function() {')
+			.stmt('if(this.env['+ this.pyrepr(varName) +'] === ' + this.pyrepr(value) + ') {', 1)
+            .stmt('spooky.waitForSelector('+ selector + ',', 2)
+            .stmt('function () {', 3)
+            .stmt('this.click('+ selector + ');', 4)
+			.logStatement('Clicked ' + selector, LOG_LEVEL.INFO, 4)
+            .stmt('});', 2)
+            .stmt('}', 1)
+            .stmt('});')
+			.space();
 	};
 
 	// set the value of a variable to a text selection
 	proto.setvarvalue = function(item, index) {
+		var commonAncestorControl = this.getControl(item.commonAncestorContainer);
+		var varName = item.var_name;
 
+		this.space()
+			.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.stmt('function() {', 1)
+			.stmt('this.env['+this.pyrepr(varName)+'] = this.promptResult;', 1)
+			.logStatement('Got ' + this.pyrepr(varName), LOG_LEVEL.INFO, 1)
+            .stmt('});', 1)
+			.space();
 	};
 
 	// ask, through voice, for the value of a variable
 	proto.requestvarvalue = function(item, index) {
+		var varName = item.var_name,
+			requestText = item.request_text;
 
+		this.space()
+            .stmt('spooky.then(function() {')
+			.voicePromptStatement(requestText, 1)
+			.logStatement('Prompt ' + this.pyrepr(varName) + ' as ' + this.pyrepr(requestText), LOG_LEVEL.INFO, 1)
+            .stmt('});')
+            .stmt('spooky.then(function() {')
+			.stmt('this.env['+this.pyrepr(varName)+'] = this.promptResult;', 1)
+			.stmt('delete this.promptResult;', 1)
+			.logStatement('Got ' + this.pyrepr(varName), LOG_LEVEL.INFO, 1)
+            .stmt('});')
+			.space();
 	};
 
 

@@ -427,7 +427,7 @@ VoiceCommander.ElementEvent = function(type, target, options) {
     }
 }
 
-VoiceCommander.SelectionEvent = function(type, selection) {
+VoiceCommander.SelectionEvent = function(type, selection, options) {
     this.type = type;
     var range = selection.getRangeAt(0);
     console.log(range);
@@ -436,6 +436,13 @@ VoiceCommander.SelectionEvent = function(type, selection) {
     this.commonAncestorContainer = new VoiceCommander.ElementInfo(range.commonAncestorContainer);
     this.startOffset = range.startOffset;
     this.endOffset = range.endOffset;
+
+    for(var key in options) {
+        if(options.hasOwnProperty(key)) {
+            var value = options[key];
+            this[key] = value;
+        }
+    }
 }
 
 VoiceCommander.CommentEvent = function(text) {
@@ -758,7 +765,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     } else if (action === 'tts_element') {
         var selection = getSelection();
         var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection);
-        console.log(e);
         recorder.macro.append(e);
     } else if(action === 'clickWhen') {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
@@ -770,9 +776,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         recorder.macro.append(e);
     } else if(action === 'setVarValueToSelection') {
         var selection = getSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection);
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection, {
+            var_name: request.var_name
+        });
 
         recorder.macro.append(e);
+    } else if(action === 'typeVarValue') {
+        var selection = getSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection, {
+            var_name: request.var_name
+        });
+
+        recorder.macro.append(e);
+    } else if(action === 'enterVar') {
     } else {
         console.log(action);
         console.log(request);

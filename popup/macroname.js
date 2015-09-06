@@ -65,6 +65,10 @@ $.widget('voice_commander.macroName', {
 			element.text('(no name)');
 		}
 		return element;
+	},
+
+	startEditing: function() {
+		this.element.editableText('startEditing');
 	}
 });
 
