@@ -3,12 +3,15 @@ var RUNNER_PROTOCOL = 'http'
 	RUNNER_PORT = 3000;
 
 function renderCasper() {
-	return Promise.all([getCurrentRecording(), getName()]).then(function(info) {
-		var recording = info[0],
-			title = info[1];
-
-		var dt = new CasperRenderer(title, recording);
+	return getRecording().then(function(info) {
+		var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
 		return dt.render();
+	});
+	return Promise.all([getCurrentRecording(), getName(), getVariables()]).then(function(info) {
+		var recording = info[0],
+			title = info[1],
+			variables = info[2];
+
 	});
 }
 
@@ -17,6 +20,10 @@ function requestStop() {
 		chrome.runtime.sendMessage({action: 'request_stop'});
 		resolve();
 	});
+}
+
+function requestCancel() {
+	return requestStop();
 }
 
 function addVariable() {
@@ -73,10 +80,11 @@ function getSelectedTab() {
 	});
 }
 
-var getCurrentRecording = fieldGetter('get_recording'),
+var getActions = fieldGetter('get_actions'),
 	getVariables = fieldGetter('get_variables'),
 	getName = fieldGetter('get_name'),
-	getStatus = fieldGetter('get_status');
+	getStatus = fieldGetter('get_status'),
+	getRecording = fieldGetter('get_recording');
 
 function fieldGetter(fieldName) {
 	return function() {
@@ -100,17 +108,6 @@ function uploadScript(scriptInfo) {
 		});
 	});
 }
-/*
-
-var HIGHLIGHTER_COLORS = ['E2FF00', 'FF8800', 'FF008E', '00FF00', '00CFFF'];
-function assignVariableColors(variables) {
-	for(var key in variables) {
-		if(variables.hasOwnProperty(key)) {
-
-		}
-	}
-}
-*/
 
 function downloadJSFile(data, name) {
 	downloadURI('data:text/javascript;charset=utf-8,' + encodeURIComponent(data), name);

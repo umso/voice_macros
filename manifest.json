@@ -6,7 +6,9 @@
 	"version": "0.0.1",
 
 	"background": {
-      "scripts": ["annyang.js", "background.js"]
+      "scripts": ["background/annyang.js", "background/model.js",
+		  			"background/background.js", "background/voice_commands.js",
+					"background/icon_manager.js"]
     },
 
 	"browser_action": {

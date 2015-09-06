@@ -9,8 +9,26 @@ $(function() {
 		}
 	});
 
-	$('#createCommand').on('click', requestStart);
-	$('#stopRecording').on('click', requestStop);
+	$('#createCommand').on('click', function() {
+		return requestStart().then(function() {
+			return enterRecordingState();
+		});
+	});
+	$('#stopRecording').on('click', function() {
+		return requestStop().then(function() {
+			return enterIdleState();
+		}).then(function() {
+			return renderCasper();
+		}).then(function(casperScript) {
+			//downloadJSFile(casperScript.body, 'casper_script.js');
+			return uploadScript(casperScript);
+		});
+	});
+	$('#cancelRecording').on('click', function() {
+		return requestCancel().then(function() {
+			return enterIdleState();
+		});
+	});
 });
 
 function updateHeight() {
@@ -65,13 +83,5 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 			//downloadJSFile(casperScript.body, 'casper_script.js');
 			return uploadScript(casperScript);
 		});
-	} else if(action === 'append') { // handled by action display
-	} else if(action === 'nameMacro') { // handled by macroName
-	} else if(action === 'set_name') {
-	} else if(action === 'request_start') {
-	} else if(action === 'request_stop') {
-	} else if(action === 'varChanged') {
-	} else {
-		console.log(action);
 	}
 });

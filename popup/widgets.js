@@ -10,6 +10,11 @@ $.widget("voice_commander.editableText", {
 	},
 	_destroy: function () {
 	},
+
+	refreshDisplay: function() {
+		this._showDisplay();
+	},
+
 	_setOption: function(key, value) {
 		this._super(key, value);
 

@@ -26,13 +26,13 @@ $.widget('voice_commander.actionDisplay', {
 	refresh: function() {
 		getStatus().then(function(status) {
 			if(status.isRecording) {
-				return getCurrentRecording();
+				return getActions();
 			} else {
 				return false;
 			}
-		}).then(function (recording) {
-			if(recording) {
-				recording.forEach(function(action, index) {
+		}).then(function (actions) {
+			if(actions) {
+				actions.forEach(function(action, index) {
 					var display = this._getDisplay(action, index+1);
 					this.actionList.append(display);
 				}.bind(this));

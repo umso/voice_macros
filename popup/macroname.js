@@ -1,6 +1,7 @@
 $.widget('voice_commander.macroName', {
 	options: {
-		name: ''
+		name: '',
+		varNames: {}
 	},
 	_create: function() {
 		this.element.editableText({
@@ -15,17 +16,24 @@ $.widget('voice_commander.macroName', {
 			var action = request.action;
 
 			if(action === 'nameMacro') {
-				var name = request.name;
-				this.option('name', name);
+				this.fullRefresh();
 			} else if(action === 'varChanged') {
-				this._setName(this.option('name'));
+				this.fullRefresh();
 			}
 		}, this));
+		this.fullRefresh();
+	},
 
-		getName().then($.proxy(function(name) {
-			this.option('name', name);
+	_refreshDisplay: function() {
+		this.element.editableText('refreshDisplay');
+	},
+
+	fullRefresh: function() {
+		getName().then($.proxy(function(nameInfo) {
+			this.option(nameInfo);
 		}, this));
 	},
+
 	_destroy: function() {
 	},
 	_setOption: function(key, value) {
@@ -33,22 +41,23 @@ $.widget('voice_commander.macroName', {
 		if(key === 'name') {
 			this._setName(value);
 		}
+		this._refreshDisplay();
 	},
 	_setName: function(name) {
 		this.element.editableText('option', 'value', name);
 	},
 
-	_getDisplay: function(name) {
-		return getVariables().then($.proxy(this._doGetDisplay, this, name));
-	},
-	_doGetDisplay: function(name, vars) {
+	_getDisplay: function() {
+		var name = this.option('name'),
+			vars = this.option('varNames');
+
 		var element = $('<span />');
 
-		if(name.trim()) {
+		if(name) {
 			var htmlValue = name;
 
-			$.each(vars, function(name, value) {
-				htmlValue = addHighlights(htmlValue, name, getVariableIndex(vars, name));
+			$.each(vars, function(name, humanVarName) {
+				htmlValue = addHighlights(htmlValue, name, humanVarName, getVariableIndex(vars, name));
 			});
 
 			element.html(htmlValue);
@@ -75,12 +84,12 @@ function preg_quote(str) {
 	return (str+'').replace(/([\\\.\+\*\?\[\^\]\$\(\)\{\}\=\!\<\>\|\:])/g, "\\$1");
 }
 
-function addHighlights(data, search, highlightClass) {
+function addHighlights(data, search, humanVarName, highlightClass) {
 	var replacementElement = $('<span />').attr({
-			'data-name': search
+			'data-name': humanVarName
 		})
 		.addClass('highlight highlight'+highlightClass)
-		.text(search);
+		.text(humanVarName);
 
 	var replacementHTML = ' ' + replacementElement[0].outerHTML + ' ';
 

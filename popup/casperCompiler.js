@@ -6,6 +6,7 @@
 var LOG_LEVEL = {
 	INFO: 1
 };
+var SCRIPT_SIGNATURE = 'VCMDRv1';
 
 function CasperRenderer(title, recording) {
 	this.title = title;
@@ -191,10 +192,13 @@ function CasperRenderer(title, recording) {
     };
 
     proto.writeHeader = function() {
-		return getFile('casper_template/casper_header.js').then($.proxy(function(headerContent) {
-	        var date = new Date();
+		return Promise.all([getFile('casper_template/casper_header.js'), getName()]).then($.proxy(function(promiseValues) {
+			var headerContent = promiseValues[0],
+				name = promiseValues[1],
+		        date = new Date();
 
-	        this.stmt("//========================================================", -10)
+	        this.stmt("//" + SCRIPT_SIGNATURE + " " + JSON.stringify(name), -10)
+				.stmt("//========================================================", -10)
 	            .stmt("// Casper generated " + date, -10)
 	            .stmt("//========================================================", -10)
 	            .space();
@@ -420,123 +424,6 @@ function CasperRenderer(title, recording) {
 
 	};
 
-	/*
-
-    proto.getControlXPath = function(item) {
-        var type = item.info.type;
-        var way;
-
-        if ((type == "submit" || type == "button") && item.info.value){
-            way = '@value=' + this.pyrepr(this.normalizeWhitespace(item.info.value));
-        } else if (item.info.name) {
-            way = '@name=' + this.pyrepr(item.info.name);
-        } else if (item.info.id) {
-            way = '@id=' + this.pyrepr(item.info.id);
-        } else {
-            way = 'TODO';
-        }
-
-        return way;
-    };
-    proto.checkPageTitle = function(item) {
-        var title = this.pyrepr(item.title, true);
-        this.stmt('casper.then(function() {', 1)
-            .stmt('test.assertTitle(' + title + ');', 2)
-            .stmt('});', 1);
-    };
-
-    proto.checkPageLocation = function(item) {
-        var url = this.regexp_escape(item.url);
-        this.stmt('casper.then(function() {')
-            .stmt('test.assertUrlMatch(/^' + url + '$/);', 2)
-            .stmt('});');
-    };
-
-    proto.checkTextPresent = function(item) {
-        var selector = 'x("//*[contains(text(), '+this.pyrepr(item.text, true)+')]")';
-        this.waitAndTestSelector(selector);
-    };
-
-    proto.checkValue = function(item) {
-        var type = item.info.type;
-        var way = this.getControlXPath(item);
-        var selector = '';
-        if (type == 'checkbox' || type == 'radio') {
-            var selected;
-            if (item.info.checked) {
-                selected = '@checked'
-            } else {
-                selected = 'not(@checked)'
-                selector = 'x("//input[' + way + ' and ' +selected+ ']")';
-            }
-        } else {
-            var value = this.pyrepr(item.info.value)
-            var tag = item.info.tagName.toLowerCase();
-            selector = 'x("//'+tag+'[' + way + ' and @value='+value+']")';
-        }
-        this.waitAndTestSelector(selector);
-    };
-
-    proto.checkText = function(item) {
-        var selector = '';
-        if ((item.info.type == "submit") || (item.info.type == "button")) {
-            selector = 'x("//input[@value='+this.pyrepr(item.text, true)+']")';
-        } else {
-            selector = 'x("//*[normalize-space(text())='+this.cleanStringForXpath(item.text, true)+']")';
-        }
-        this.waitAndTestSelector(selector);
-    };
-
-    proto.checkHref = function(item) {
-        var href = this.pyrepr(this.shortUrl(item.info.href));
-        var xpath_selector = this.getLinkXPath(item);
-        if(xpath_selector) {
-            selector = 'x("//a['+xpath_selector+' and @href='+ href +']")';
-        } else {
-            selector = item.info.selector+'[href='+ href +']';
-        }
-
-        this.stmt('casper.then(function() {')
-            .stmt('test.assertExists('+selector+');', 2)
-            .stmt('});');
-    };
-
-    proto.checkEnabled = function(item) {
-        var way = this.getControlXPath(item);
-        var tag = item.info.tagName.toLowerCase();
-        this.waitAndTestSelector('x("//'+tag+'[' + way + ' and not(@disabled)]")');
-    };
-
-    proto.checkDisabled = function(item) {
-        var way = this.getControlXPath(item);
-        var tag = item.info.tagName.toLowerCase();
-        this.waitAndTestSelector('x("//'+tag+'[' + way + ' and @disabled]")');
-    };
-
-    proto.checkSelectValue = function(item) {
-        var value = this.pyrepr(item.info.value);
-        var way = this.getControlXPath(item);
-        this.waitAndTestSelector('x("//select[' + way + ']/options[@selected and @value='+value+']")');
-    };
-
-    proto.checkSelectOptions = function(item) {
-    };
-
-    proto.checkImageSrc = function(item) {
-        var src = this.pyrepr(this.shortUrl(item.info.src));
-        this.waitAndTestSelector('x("//img[@src=' + src + ']")');
-    };
-
-    proto.waitAndTestSelector = function(selector) {
-        this.stmt('casper.waitForSelector(' + selector + ',')
-            .stmt('function success() {', 2)
-            .stmt('test.assertExists(' + selector + ');', 3)
-            .stmt('},', 2)
-            .stmt('function fail() {', 2)
-            .stmt('test.assertExists(' + selector + ');', 3)
-            .stmt('});');
-    };
-	*/
 
 	function getFile(filename) {
 		return new Promise(function(resolve, reject) {
