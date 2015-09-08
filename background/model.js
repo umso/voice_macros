@@ -140,6 +140,15 @@ function doStop() {
 	}
 }
 
+function updateStep(step) {
+	var actions = doGetActions();
+	actions.forEach(function(action) {
+		if(action.uid === step.uid) {
+			
+		}
+	});
+}
+
 function doGetVariables() { return currentRecording.vars; }
 function doGetActions() { return currentRecording.actions; }
 function doGetSpecifiedName() { return currentRecording.specifiedName; }

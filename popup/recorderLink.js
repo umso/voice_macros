@@ -74,6 +74,13 @@ function postNewName(newName) {
 	});
 }
 
+function postUpdate(step) {
+	return new Promise(function(resolve, reject) {
+		chrome.runtime.sendMessage({action: 'update_step', step: step});
+		resolve();
+	});
+}
+
 function getSelectedTab() {
 	return new Promise(function(resolve, reject) {
 		chrome.tabs.getSelected(null, function(tab) {

@@ -1,7 +1,6 @@
 $.widget('voice_commander.variableListDisplay', {
 	options: {
-		instructionsText: 'Voice Commander is currently recording your actions in Chrome (such as clicks and keypresses). These actions will help write an automated command script. They will not be shared.',
-		variableInstructionsText: 'Commands can have variables, which are dynamically changing parameters of the command.'
+		variableInstructionsText: 'Commands can have variables, which are changeable parameters of the command.'
 	},
 	_create: function() {
 		this._titleContainer = $('<div />')	.addClass('mdl-card__title')
@@ -14,9 +13,11 @@ $.widget('voice_commander.variableListDisplay', {
 		this._variableDisplays = $('<div />')	.appendTo(this.element)
 												.addClass('variable-display');
 
+		/*instructionsText: 'Voice Commander is currently recording your actions in Chrome (such as clicks and keypresses). These actions will help write an automated command script. They will not be shared.',
 		this._instructionDisplay = $('<p />')	.addClass('mdl-card__supporting-text variableInstructions')
 												.text(this.option('instructionsText'))
 												.appendTo(this._variableDisplays);
+												*/
 
 		this._variableInstructions = $('<p />')	.appendTo(this._variableDisplays)
 												.addClass('mdl-card__supporting-text variableInstructions')
@@ -80,11 +81,11 @@ $.widget('voice_commander.variableListDisplay', {
 		}, this));
 		if(_.isEmpty(variables)) {
 			this.element.addClass('instructions');
-			this._instructionDisplay.show();
+			//this._instructionDisplay.show();
 			this._variableInstructions.show();
 		} else {
 			this.element.removeClass('instructions');
-			this._instructionDisplay.hide();
+			//this._instructionDisplay.hide();
 			this._variableInstructions.hide();
 		}
 	}

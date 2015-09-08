@@ -3,42 +3,60 @@ $.widget('voice_commander.gotoDisplay', {
 		action: false
 	},
 	_create: function() {
+		var action = this.option('action'),
+			url = action.url;
+
 		this.goToDisplay = $('<span />').addClass('command_type go_to').text('go to ').appendTo(this.element);
-		this.uriDisplay = $('<span />').addClass('uri').appendTo(this.element);
-		this.protocolName = $('<span />').addClass('protocol').appendTo(this.uriDisplay);
-		this.protocolDelimiter = $('<span />').addClass('delimiter').appendTo(this.uriDisplay);
-		this.hostName = $('<span />').addClass('hostName').appendTo(this.uriDisplay);
-		this.path = $('<span />').addClass('path').appendTo(this.uriDisplay);
+
+		this.uri = $('<span />').editableText({
+						updateOwnValue: false,
+						getDisplay: $.proxy(this._getDisplay, this),
+						value: url
+					})
+					.on('textChange', $.proxy(function(event) {
+						action.url = event.value;
+						postUpdate(action);
+					}, this))
+					.appendTo(this.element);
 
 		this._updateURI();
 	},
 	_destroy: function() {
 	},
 	_updateURI: function() {
-		var action = this.option('action'),
-			parsedURI = parseURI(action.url),
+	},
+	_getDisplay: function(url) {
+		var uriDisplay = $('<span />').addClass('uri');
+		var protocolName = $('<span />').addClass('protocol').appendTo(uriDisplay);
+		var protocolDelimiter = $('<span />').addClass('delimiter').appendTo(uriDisplay);
+		var hostName = $('<span />').addClass('hostName').appendTo(uriDisplay);
+		var path = $('<span />').addClass('path').appendTo(uriDisplay);
+
+		var parsedURI = parseURI(url),
 			protocolText,
-			protocolDelimiter,
-			path;
+			delimiter,
+			pathValue;
 
 		if(parsedURI.protocol === 'http') {
 			protocolText = '';
-			protocolDelimiter = '';
+			delimiter = '';
 		} else {
 			protocolText = parsedURI.protocol;
-			protocolDelimiter = '://';
+			delimiter = '://';
 		}
 
 		if(parsedURI.path === '/') {
-			path = '';
+			pathValue = '';
 		} else {
-			path = parsedURI.path;
+			pathValue = parsedURI.path;
 		}
 
-		this.protocolName.text(protocolText);
-		this.protocolDelimiter.text(protocolDelimiter);
-		this.hostName.text(parsedURI.host);
-		this.path.text(path);
+		protocolName.text(protocolText);
+		protocolDelimiter.text(delimiter);
+		hostName.text(parsedURI.host);
+		path.text(pathValue);
+
+		return uriDisplay;
 	},
 	_setOption: function(key, value) {
 		this._super(key, value);
