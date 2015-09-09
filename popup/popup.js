@@ -1,6 +1,86 @@
 var wasRecording = false;
 
 $(function() {
+	var unuploadedRecording = localStorage.getItem(LSKEY);
+	if(unuploadedRecording) {
+		var recording;
+		try {
+			recording = JSON.parse(unuploadedRecording);
+		} catch(e) {
+			console.error(e);
+		}
+	}
+	if(recording) {
+		doUploadScript();
+	} else {
+		enterCurrentStatusState();
+	}
+
+	$('#createCommand').on('click', requestStart);
+	$('#stopRecording').on('click', requestStop);
+	$('#cancelRecording').on('click', requestCancel);
+
+	chrome.runtime.onMessage.addListener($.proxy(function(request, sender, sendResponse) {
+		var action = request.action;
+		if(action === 'stopped') {
+			if(request.cancelled) {
+				enterIdleState();
+			} else {
+				doUploadScript();
+			}
+		} else if(action === 'started') {
+			enterRecordingState().then(function() {
+				$('#macroName').macroName('startEditing');
+			});
+		}
+	}, this));
+});
+
+var LSKEY = 'unuploadedRecording';
+
+function stringifyRecording(rec) {
+	var rv = _.extend({}, rec);
+
+	rv.actions = _.map(rec.actions, function(action) {
+		var altAction = _.extend({}, action);
+		delete altAction.dataURI;
+		return altAction;
+	})
+	return JSON.stringify(rv);
+}
+
+function doUploadScript() {
+	var currCasperScript;
+
+	return enterUploadingState().then(function() {
+		return getRecording();
+	}).then(function(info) {
+		localStorage.setItem(LSKEY, stringifyRecording(info));
+		var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
+		return dt.render();
+	}).then(function(casperScript) {
+		currCasperScript = casperScript;
+		return uploadScript(casperScript);
+	}).then(function() {
+		localStorage.removeItem(LSKEY);
+		enterIdleState();
+	}, function(err) {
+		return enterErrorState('Error uploading command', {
+			'Retry': function() {
+				doUploadScript();
+			}, 'Download': function() {
+				downloadJSFile(currCasperScript.body, 'casper_script.js');
+				localStorage.removeItem(LSKEY);
+				enterCurrentStatusState();
+			}, 'Cancel': function() {
+				localStorage.removeItem(LSKEY);
+				enterCurrentStatusState();
+			}
+		});
+	});
+}
+
+function enterCurrentStatusState() {
 	getStatus().then(function(status) {
 		if(status.isRecording) {
 			enterRecordingState();
@@ -8,30 +88,7 @@ $(function() {
 			enterIdleState();
 		}
 	});
-
-	$('#createCommand').on('click', function() {
-		return requestStart().then(function(status) {
-			return enterRecordingState();
-		}).then(function() {
-			$('#macroName').macroName('startEditing');
-		});
-	});
-	$('#stopRecording').on('click', function() {
-		return requestStop().then(function() {
-			return enterIdleState();
-		}).then(function() {
-			return renderCasper();
-		}).then(function(casperScript) {
-			//downloadJSFile(casperScript.body, 'casper_script.js');
-			return uploadScript(casperScript);
-		});
-	});
-	$('#cancelRecording').on('click', function() {
-		return requestCancel().then(function() {
-			return enterIdleState();
-		});
-	});
-});
+}
 
 function updateHeight() {
 	var cardHeight = 0;
@@ -47,6 +104,7 @@ function enterRecordingState() {
 
 		$('#introduction_card').hide();
 		$('#variables_card, #actions_card').show();
+		$('#uploading_card, #error_card').hide();
 
 		$('#actionDisplay').actionDisplay();
 		$('#variables_card').variableListDisplay();
@@ -58,16 +116,67 @@ function enterRecordingState() {
 	});
 }
 
+function enterUploadingState() {
+	return new Promise(function(resolve) {
+		if(wasRecording) {
+			$('#actionDisplay').actionDisplay("destroy");
+			$('#variables_card').variableListDisplay("destroy");
+			$('#macroName').macroName("destroy");
+			wasRecording = false;
+		}
+
+		$('#introduction_card').hide();
+		$('#variables_card, #actions_card').hide();
+		$('#uploading_card').show();
+		$('#error_card').hide();
+
+		resolve();
+	});
+}
+
+function enterErrorState(message, actions) {
+	return new Promise(function(resolve) {
+		$('#introduction_card').hide();
+		$('#variables_card, #actions_card').hide();
+		$('#uploading_card').hide();
+
+		$("#error_card #errorMessage").text(message);
+
+		$("#error_card").show();
+
+		var errorActions = $('#error_card #errorActions');
+
+		errorActions.children().remove();
+
+		_.each(actions, function(onClick, actionName) {
+			$('<a />')	.text(actionName)
+						.appendTo(errorActions)
+						.on('click', function() {
+							onClick.apply(this, arguments);
+						})
+						.addClass('mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect');
+		});
+
+		resolve();
+	});
+}
+
+function refreshActions() {
+	$('#actionDisplay').actionDisplay('refresh');
+}
+
 function enterIdleState() {
 	return new Promise(function(resolve) {
 		if(wasRecording) {
 			$('#actionDisplay').actionDisplay("destroy");
 			$('#variables_card').variableListDisplay("destroy");
 			$('#macroName').macroName("destroy");
+			wasRecording = false;
 		}
 
 		$('#introduction_card').show();
 		$('#variables_card, #actions_card').hide();
+		$('#uploading_card, #error_card').hide();
 
 		updateHeight();
 		resolve();

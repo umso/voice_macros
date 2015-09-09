@@ -19,43 +19,86 @@ function addMacroRecordingCommands() {
 			"call does command *name": nameMacro,
 			"harvest command *name": nameMacro,
 
-			"(and) when (the) :var is *value_and_action": function(var_name, value_and_action) {
-				var clickIndex = Math.max(value_and_action.indexOf('click'),
-											value_and_action.indexOf('clip'));
-				var value = value_and_action.substring(0, clickIndex).trim();
-
-				if(clickIndex >= 0) {
-					clickWhenValue(var_name, value);
-				}
-			},
-
-			"type (the) :var (here)": enterVar,
-			"enter (the) :var (here)": enterVar,
-
-
-			":var is this": setVarValueToSelection,
-			"this is :var": setVarValueToSelection,
-
-			"ask the user for :var": askForValue,
-			"ask the user for :var (as) (and) *requestText": askForValue,
-
-			"for now set :var to *value": setTemporaryValue,
-			"for now set :var as *value": setTemporaryValue,
-
 			"read this (aloud)": onRead,
 			"read this out loud": onRead,
 			"respond with this": onRead,
 			"read (this) (back) to (the) user": onRead,
 
+			"(the) :var_name is (a) variable": function(var_name) {
+				setTemporaryValue(var_name, 'value');
+			}
 		});
 
 		resolve(rv);
 	});
 }
 
+function addVariableCommands(varNames) {
+	return Promise.all(_.map(varNames, addVariableCommand));
+}
+
+function addVariableCommand(varName) {
+	var doEnterVar = function() { return enterVar(varName); },
+		doSetVarValueToSelection = function() { return setVarValueToSelection(varName); },
+		doAskForValue = function (requestText) { return askForValue(varName, requestText); },
+		doSetTemporaryValue = function(value) { return setTemporaryValue(varName, value); },
+		doRenameVariable = function(newName) { return changeVarName(varName, newName); };
+
+	return new Promise(function(resolve, reject) {
+		var commands = {};
+		commands["(and) when (the) " + varName + " is *value_and_action"] = function(var_name, value_and_action) {
+			var clickIndex = Math.max(value_and_action.indexOf('click'),
+										value_and_action.indexOf('clip'));
+			var value = value_and_action.substring(0, clickIndex).trim();
+
+			if(clickIndex >= 0) {
+				clickWhenValue(varName, value);
+			}
+		};
+
+		commands["type (the) " + varName + " (here)"] =
+			commands["enter (the) :var (here)"] = doEnterVar;
+
+		commands[varName + " is this"] =
+			commands["this is " + varName] = doSetVarValueToSelection;
+
+		commands["ask the user for " + varName] =
+			commands["ask the user for " + varName + " (as) (and) *requestText"] = doAskForValue;
+
+		commands["(no) not " + varName + " (but) :newVarName"] =
+			commands["rename " + varName + " (to) :newVarName"] = doRenameVariable;
+
+		commands["(for) (now) set " + varName + " to *value"] =
+			commands["pronounce (a) set " + varName + " as *value"] =
+			commands["pronounce (a) 8 " + varName + " 2 *value"] =
+			commands["(for) (now) set " + varName + " 2 *value"] =
+			commands["(for) (now) set " + varName + " - *value"] =
+			commands["4 now set " + varName + " - *value"] =
+			commands["pnau set " + varName + " to "] =
+			commands["(for) (now) set " + varName + " as *value"] = doSetTemporaryValue;
+
+		rv = annyang.addCommands(commands);
+
+		resolve(rv);
+	});
+}
+
+function removeVariableCommands() {
+	annyang.removeCommands();
+	return addCoreCommands().then(function() {
+		return addMacroRecordingCommands();
+	});
+}
+
+function updateVariableCommands(varNames) {
+	return removeVariableCommands().then(function() {
+		return addVariableCommands(varNames);
+	});
+}
+
 function removeMacroRecordingCommands() {
 	annyang.removeCommands();
-	addCoreCommands();
+	return addCoreCommands();
 }
 
 function addCoreCommands() {
@@ -68,9 +111,8 @@ function addCoreCommands() {
 			}
 		});
 	};
-	var stopRecording = function() {
-		doStop();
-	};
+	var stopRecording = function() { doStop(); };
+	var cancelRecording = function() { doCancel(); };
 
 	return new Promise(function(resolve, reject) {
 		var rv = annyang.addCommands({
@@ -85,16 +127,20 @@ function addCoreCommands() {
 			"start (a) recording (a) (new) command (called) (named) *name": startRecording,
 			"record (a) (new) command (called) (named) *name": startRecording,
 			"create (a) new command": startRecording,
+			"create (a) new recording": startRecording,
 			"start (a) command": startRecording,
 			"start recording (a) (new) command": startRecording,
 
 			"stop (a) (this) recording": stopRecording,
-			"stop (this) macro": stopRecording,
 			"end (this) macro": stopRecording,
 			"end (this) recording": stopRecording,
 			"stop (this) command": stopRecording,
 			"end (this) command": stopRecording,
-			"upload (this) command": stopRecording
+			"upload (this) command": stopRecording,
+
+			"cancel (a) (this) recording": cancelRecording,
+			"cancel (a) (this) macro": cancelRecording,
+			"cancel (a) (this) command": cancelRecording
 		});
 
 		resolve(rv);
@@ -151,7 +197,7 @@ function requestSpeechPermission(ready) {
 
 addCoreCommands().then(function() {
 	annyang.addCallback('resultNoMatch', function() {
-		//console.log(arguments);
+		console.log(arguments);
 	});
 	return beginSpeechRecognition();
 });

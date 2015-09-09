@@ -4,16 +4,20 @@ $.widget('voice_commander.actionDisplay', {
 	},
 
 	_create: function() {
-		this.itemDisplays = {};
 		this.refresh();
 		this.actionList = $('<div />').appendTo(this.element);
 
-		chrome.runtime.onMessage.addListener($.proxy(function(request, sender, sendResponse) {
-			var action = request.action;
-			if(action === 'append') {
-				this.refresh();
-			}
-		}, this));
+		this.$_onRuntimeMessage = $.proxy(this._onRuntimeMessage, this);
+
+		chrome.runtime.onMessage.addListener(this.$_onRuntimeMessage);
+
+		this._itemDisplayMap = new UniqueChildTracker(function(value, key) {
+			return $('<div />').step({
+				action: value
+			});
+		}, function(action, index) {
+			return action.uid;
+		});
 	},
 
 	_destroy: function() {
@@ -21,6 +25,20 @@ $.widget('voice_commander.actionDisplay', {
 			$(child).step('destroy').remove();
 		});
 		this.element.children().remove();
+
+		chrome.runtime.onMessage.removeListener(this.$_onRuntimeMessage);
+	},
+
+	_onRuntimeMessage: function(request, sender, sendResponse) {
+		var action = request.action;
+		if(action === 'append') {
+			this.refresh();
+		} else if(action === 'stepChanged') {
+			if(this._itemDisplayMap.hasChildView(request.uid)) {
+				var childView = this._itemDisplayMap.getChildView(action.uid);
+				childView.step('option', 'action', request.step);
+			}
+		}
 	},
 
 	refresh: function() {
@@ -31,12 +49,34 @@ $.widget('voice_commander.actionDisplay', {
 				return false;
 			}
 		}).then(function (actions) {
-			if(actions) {
-				actions.forEach(function(action, index) {
-					var display = this._getDisplay(action, index+1);
-					this.actionList.append(display);
-				}.bind(this));
-			}
+			return _.filter(actions, function(action) {
+				return getDisplayTypeName(action.type);
+			});
+		}).then(function(displayableActions) {
+			return _.filter(displayableActions, function(action, index) {
+				var type = action.type;
+				if(type === ECODE.Click && displayableActions[index+1] && displayableActions[index+1].type === ECODE.OpenUrl) {
+					return false;
+				}
+				return true;
+			});
+		}).then(function (displayableActions) {
+			this._itemDisplayMap.setChildren(displayableActions).then(_.bind(function(info) {
+				var toRemove = info.toRemove,
+					childViews = info.childViews;
+
+				_.each(toRemove, function(childView) {
+					childView.step('destroy').remove();
+				}, this);
+
+				_.each(childViews, function(childView, index) {
+					this.actionList.append(childView);
+					childView.step('option', {
+						index: index+1,
+						action: displayableActions[index]
+					});
+				}, this);
+			}, this));
 		}.bind(this));
 	},
 
@@ -55,7 +95,10 @@ $.widget('voice_commander.actionDisplay', {
 			this.itemDisplays[uid] = display;
 		}
 
-		display.step('option', 'index', index);
+		display.step('option', {
+			index: index,
+			action: action
+		});
 
 		return display;
 	}
@@ -85,6 +128,16 @@ $.widget('voice_commander.stepNumberDisplay', {
 
 var ECODE = VOICE_COMMANDER_EVENT_CODE;
 
+function getDisplayTypeName(type) {
+	if(type === ECODE.OpenUrl) {
+		return 'gotoDisplay';
+	} else if(type === ECODE.Click) {
+		return 'clickDisplay';
+	} else {
+		return false;
+	}
+}
+
 $.widget('voice_commander.step', {
 	options: {
 		action: false,
@@ -99,29 +152,31 @@ $.widget('voice_commander.step', {
 		this._updateActionDisplay();
 	},
 	_destroy: function() {
-		var displayTypeName = this._getDisplayTypeName(this.option('action').type);
+		var displayTypeName = getDisplayTypeName(this.option('action').type);
+
+		if(displayTypeName) {
+			this.stepDisplay[displayTypeName]('destroy');
+		}
 
 		this.stepNumberDisplay.stepNumberDisplay('destroy');
 	},
 	_setOption: function(key, value) {
-		if(key == 'index') {
-			this.stepNumberDisplay.stepNumberDisplay('option', key, value);
-		}
 		this._super(key, value);
-	},
-	_getDisplayTypeName: function(type) {
-		if(type === ECODE.OpenUrl) {
-			return 'gotoDisplay';
-		} else if(type === ECODE.Click) {
-			return 'clickDisplay';
-		} else {
-			return false;
+
+		if(key === 'index') {
+			this.stepNumberDisplay.stepNumberDisplay('option', key, value);
+		} else if(key === 'action') {
+			var displayTypeName = getDisplayTypeName(this.option('action').type);
+
+			if(displayTypeName) {
+				this.stepDisplay[displayTypeName]('option', key, value);
+			}
 		}
 	},
 	_updateActionDisplay: function() {
 		var action = this.option('action'),
 			type = action.type,
-			displayTypeName = this._getDisplayTypeName(type),
+			displayTypeName = getDisplayTypeName(type),
 			display = this.stepDisplay;
 
 		if(displayTypeName) {

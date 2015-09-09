@@ -2,29 +2,17 @@ var RUNNER_PROTOCOL = 'http'
 	RUNNER_HOST = 'localhost',
 	RUNNER_PORT = 3000;
 
-function renderCasper() {
-	return getRecording().then(function(info) {
-		var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
-		return dt.render();
-	});
-	return Promise.all([getCurrentRecording(), getName(), getVariables()]).then(function(info) {
-		var recording = info[0],
-			title = info[1],
-			variables = info[2];
 
-	});
-}
-
-function requestStop() {
+function requestStop(cancelled) {
 	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'request_stop'}, function(status) {
+		chrome.runtime.sendMessage({action: 'request_stop', cancelled: (cancelled===true)}, function(status) {
 			resolve(status);
 		});
 	});
 }
 
 function requestCancel() {
-	return requestStop();
+	return requestStop(true);
 }
 
 function addVariable() {
@@ -76,8 +64,9 @@ function postNewName(newName) {
 
 function postUpdate(step) {
 	return new Promise(function(resolve, reject) {
-		chrome.runtime.sendMessage({action: 'update_step', step: step});
-		resolve();
+		chrome.runtime.sendMessage({action: 'update_step', step: step}, function(actions) {
+			resolve(actions);
+		});
 	});
 }
 
@@ -93,7 +82,8 @@ var getActions = fieldGetter('get_actions'),
 	getVariables = fieldGetter('get_variables'),
 	getName = fieldGetter('get_name'),
 	getStatus = fieldGetter('get_status'),
-	getRecording = fieldGetter('get_recording');
+	getRecording = fieldGetter('get_recording'),
+	getDisplayName = fieldGetter('get_display_name');
 
 function fieldGetter(fieldName) {
 	return function() {
@@ -113,6 +103,9 @@ function uploadScript(scriptInfo) {
 			data: scriptInfo,
 			success: function(response) {
 				resolve(response);
+			},
+			error: function(response) {
+				reject(response);
 			}
 		});
 	});

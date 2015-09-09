@@ -53,6 +53,8 @@ function updateComputedNameAndVars() {
 		currentRecording.computedName = name;
 		currentRecording.varNames = varKeys;
 	}
+
+	return updateVariableCommands(varNames);
 }
 
 function escapeRegExp(string) {
@@ -127,24 +129,28 @@ function doStart(tab_id) {
 	return recordingPromise;
 }
 
-function doStop() {
+function doStop(cancelled) {
 	if(isRecording) {
 		isRecording = false;
 
 		addStartingURL(currentRecording);
 
 		updateIcon();
-		chrome.runtime.sendMessage({action: 'stopped'});
+		chrome.runtime.sendMessage({action: 'stopped', cancelled: !!cancelled});
 		chrome.contextMenus.remove(readContextMenu);
 		removeMacroRecordingCommands();
 	}
 }
 
+function doCancel() {
+	return doStop(true);
+}
+
 function updateStep(step) {
-	var actions = doGetActions();
-	actions.forEach(function(action) {
+	_.each(doGetActions(), function(action) {
 		if(action.uid === step.uid) {
-			
+			_.extend(action, step);
+			notifyStepChanged(action);
 		}
 	});
 }
@@ -170,6 +176,7 @@ function doSetName(name) {
 function doAppend(action) {
 	action.uid = uid++;
 	currentRecording.actions.push(action);
+	return action.uid;
 }
 
 function getTab(tab_id) {
@@ -289,5 +296,12 @@ function processScriptName(script_name) { return script_name.trim().toLowerCase(
 function notifyVarChanged() {
 	chrome.runtime.sendMessage({
 		action: 'varChanged'
+	});
+}
+function notifyStepChanged(step) {
+	chrome.runtime.sendMessage({
+		action: 'stepChanged',
+		uid: step.uid,
+		step: step
 	});
 }

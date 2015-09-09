@@ -3,27 +3,31 @@ $.widget('voice_commander.gotoDisplay', {
 		action: false
 	},
 	_create: function() {
-		var action = this.option('action'),
-			url = action.url;
+		var action = this.option('action');
 
 		this.goToDisplay = $('<span />').addClass('command_type go_to').text('go to ').appendTo(this.element);
 
 		this.uri = $('<span />').editableText({
 						updateOwnValue: false,
 						getDisplay: $.proxy(this._getDisplay, this),
-						value: url
+						value: action.url
 					})
 					.on('textChange', $.proxy(function(event) {
 						action.url = event.value;
-						postUpdate(action);
+						postUpdate(action).then(function() {
+							refreshActions();
+						});
 					}, this))
 					.appendTo(this.element);
 
-		this._updateURI();
+		this._update();
 	},
 	_destroy: function() {
+		this.uri.editableText('destroy');
 	},
-	_updateURI: function() {
+	_update: function() {
+		var action = this.option('action');
+		this.uri.editableText('option', 'value', action.url);
 	},
 	_getDisplay: function(url) {
 		var uriDisplay = $('<span />').addClass('uri');
@@ -37,7 +41,7 @@ $.widget('voice_commander.gotoDisplay', {
 			delimiter,
 			pathValue;
 
-		if(parsedURI.protocol === 'http') {
+		if(parsedURI.protocol === 'http' || !parsedURI.protocol) {
 			protocolText = '';
 			delimiter = '';
 		} else {
@@ -58,11 +62,10 @@ $.widget('voice_commander.gotoDisplay', {
 
 		return uriDisplay;
 	},
+
 	_setOption: function(key, value) {
 		this._super(key, value);
-		if(key === 'stepNumber') {
-			this.stepNumberDisplay.text(value);
-		}
+		this._update();
 	}
 });
 

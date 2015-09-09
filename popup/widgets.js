@@ -2,6 +2,7 @@ $.widget("voice_commander.editableText", {
 	options: {
 		value: "",
 		getDisplay: false,
+		getEditingValue: false,
 		updateOwnValue: true
 	},
 	_create: function () {
@@ -111,11 +112,19 @@ $.widget("voice_commander.editableText", {
 	},
 
 	_showEditor: function() {
+		var getEditingValue = this.option('getEditingValue');
+		var value;
+		if(getEditingValue) {
+			value = getEditingValue();
+		} else {
+			value = this.option('value');
+		}
+
 		this.element.off('click.startEditing');
 		this.element.children().remove();
 
 		this.textEditor = $('<input />').appendTo(this.element)
-										.val(this.option('value'))
+										.val(value)
 										.on('keydown', $.proxy(this._onEditKeydown, this))
 										.on('blur', $.proxy(this._onEditBlur, this))
 										.css({
@@ -173,8 +182,12 @@ var UniqueChildTracker = (function(My) {
 		});
 	};
 
+	proto.hasChildView = function(key, child) {
+		return this.children.hasOwnProperty(key);
+	};
+
 	proto.getChildView = function(key, child) {
-		if(this.children.hasOwnProperty(key)) {
+		if(this.hasChildView(key)) {
 			return this.children[key];
 		} else {
 			var childView = this.createElement(child, key);

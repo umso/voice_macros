@@ -45,12 +45,10 @@ $.widget('voice_commander.variableListDisplay', {
 			});
 		});
 
-		chrome.runtime.onMessage.addListener($.proxy(function(request, sender, sendResponse) {
-			if(request.action === 'varChanged') {
-				this._refresh();
-			}
-		}, this));
+		this.$_onRuntimeMessage = $.proxy(this._onRuntimeMessage, this);
+		chrome.runtime.onMessage.addListener(this.$_onRuntimeMessage);
 	},
+
 	_destroy: function() {
 		this._addVariableDisplay.remove();
 		this._variableList.children().each(function(varDisplay) {
@@ -58,6 +56,13 @@ $.widget('voice_commander.variableListDisplay', {
 		});
 		this._titleText.macroName('destroy').remove();
 		this.element.children().remove();
+		chrome.runtime.onMessage.removeListener(this.$_onRuntimeMessage);
+	},
+
+	_onRuntimeMessage: function(request, sender, sendResponse) {
+		if(request.action === 'varChanged') {
+			this._refresh();
+		}
 	},
 
 	_refresh: function() {
@@ -75,7 +80,10 @@ $.widget('voice_commander.variableListDisplay', {
 			_.each(childViews, function(childView) {
 				var name = childView.variable('option', 'name');
 				this._variableList.append(childView);
-				childView.variable('option', 'highlightClass', getVariableIndex(variables, name));
+				childView.variable('option', {
+					'highlightClass': getVariableIndex(variables, name),
+					'value': variables[name]
+				});
 			}, this);
 			this._addVariableDisplay.appendTo(this._variableList);
 		}, this));

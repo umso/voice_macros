@@ -338,6 +338,7 @@ function CasperRenderer(title, recording) {
 			var selector = this.getElementSelector(item);
 
             this.stmt('spooky.waitForSelector('+ selector + ',')
+				.stmt('//' + item.info.frameNum)
                 .stmt('function () {', 1)
                 .stmt('this.click('+ selector + ');', 2)
 				.logStatement('Clicked ' + selector, LOG_LEVEL.INFO, 2)

@@ -53,20 +53,32 @@ if (typeof(VoiceCommander) == "undefined") {
 if (typeof(VoiceCommander.Browser) == "undefined") {
     VoiceCommander.Browser = {};
 }
-
-VoiceCommander.Browser.captureEvent = function(wnd, name, func) {
+VoiceCommander.Browser.doCaptureEvent = function(wnd, name, func, frameNum) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.captureEvents(Event[name.toUpperCase()]);
-    wnd["on" + lname] = func;
-}
+    wnd["on" + lname] = func.bind(this, frameNum);
+};
 
-VoiceCommander.Browser.releaseEvent = function(wnd, name, func) {
+VoiceCommander.Browser.captureEvent = function(wnd, name, func) {
+    getEveryFrameAndWindow(wnd).forEach(function(frame, i) {
+        VoiceCommander.Browser.doCaptureEvent(frame, name, func, (i===0) ? false : i-1);
+    });
+};
+
+VoiceCommander.Browser.doReleaseEvent = function(wnd, name, func) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.releaseEvents(Event[name.toUpperCase()]);
     wnd["on" + lname] = null;
-}
+};
+
+VoiceCommander.Browser.releaseEvent = function(wnd, name, func) {
+    getEveryFrameAndWindow(wnd).forEach(function(frame, i) {
+        VoiceCommander.Browser.doReleaseEvent(frame, name, func, (i === 0) ? false : i-1);
+    });
+};
+
 
 VoiceCommander.Browser.windowHeight = function(wnd) {
     var doc = wnd.document;
@@ -231,9 +243,24 @@ VoiceCommander.Macro = function() {
 (function(My) {
     var proto = My.prototype;
 
-    proto.append = function(o) {
-        this.items.push(o);
-        chrome.runtime.sendMessage({action: "append", obj: o});
+    proto.append = function(o, otherData) {
+        return new Promise(function(resolve) {
+            this.items.push(o);
+            chrome.runtime.sendMessage(_.extend({
+                action: 'append',
+                obj: o
+            }, otherData), function(uid) {
+                resolve(uid);
+            });
+        }.bind(this));
+    };
+
+    proto.attachImage = function(uid, dataURI) {
+        chrome.runtime.sendMessage({
+            action: 'attach_image',
+            uid: uid,
+            dataURI: dataURI
+        });
     };
 
     proto.peek = function() {
@@ -430,19 +457,13 @@ VoiceCommander.ElementEvent = function(type, target, options) {
 VoiceCommander.SelectionEvent = function(type, selection, options) {
     this.type = type;
     var range = selection.getRangeAt(0);
-    console.log(range);
     this.startContainerInfo = new VoiceCommander.ElementInfo(range.startContainer);
     this.endContainerInfo = new VoiceCommander.ElementInfo(range.endContainer);
     this.commonAncestorContainer = new VoiceCommander.ElementInfo(range.commonAncestorContainer);
     this.startOffset = range.startOffset;
     this.endOffset = range.endOffset;
 
-    for(var key in options) {
-        if(options.hasOwnProperty(key)) {
-            var value = options[key];
-            this[key] = value;
-        }
-    }
+    _.extend(this, options);
 }
 
 VoiceCommander.CommentEvent = function(text) {
@@ -450,17 +471,21 @@ VoiceCommander.CommentEvent = function(text) {
     this.text = text;
 }
 
-VoiceCommander.KeyEvent = function(target, text) {
+VoiceCommander.KeyEvent = function(target, text, options) {
     this.type = EVENT_CODE.KeyPress;
     this.info = new VoiceCommander.ElementInfo(target);
     this.text = text;
+
+    _.extend(this, options);
 }
 
-VoiceCommander.MouseEvent = function(type, target, x, y) {
+VoiceCommander.MouseEvent = function(type, target, x, y, options) {
     this.type = type;
     this.info = new VoiceCommander.ElementInfo(target);
     this.x = x;
     this.y = y;
+
+    _.extend(this, options);
 }
 
 VoiceCommander.ScreenShotEvent = function() {
@@ -556,6 +581,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     var eventTypes = ['drag', 'mousedown',
                         'mouseup', 'click', 'change',
                         'keypress', 'select', 'submit'];
+
     proto.captureEvents = function() {
         var wnd = this.window;
         eventTypes.forEach(function(eventType) {
@@ -572,7 +598,8 @@ recorder.logfunc = function(msg) { console.log(msg); };
 
 
 
-    proto.clickaction = function(e) {
+    proto.clickaction = function(frameNum, e) {
+        var target = e.target();
         // This method is called by our low-level event handler when the mouse
         // is clicked in normal mode. Its job is decide whether the click is
         // something we care about. If so, we record the event in the test case.
@@ -580,15 +607,24 @@ recorder.logfunc = function(msg) { console.log(msg); };
         // If the context menu is visible, then the click is either over the
         // menu (selecting a check) or out of the menu (cancelling it) so we
         // always discard clicks that happen when the menu is visible.
-        var t = e.target();
-        if (t.href || (t.type && t.type == "submit") ||
-                (t.type && t.type == "submit")) {
-            this.macro.append(new VoiceCommander.ElementEvent(EVENT_CODE.Click, e.target()));
+        var type = target.type;
+        var imageDataPromise = getImageData(target);
+        if (target.href || (type && type == "submit") ||
+                (type && type == "submit")) {
+            this.macro.append(new VoiceCommander.ElementEvent(EVENT_CODE.Click, target, {frameNum: frameNum}));
         } else {
+            var posX = e.posX,
+                posY = e.posY();
+
             recorder.macro.append(
                     new VoiceCommander.MouseEvent(
-                            EVENT_CODE.Click, e.target(), e.posX(), e.posY()
-                    ));
+                            EVENT_CODE.Click, target, posX, posY
+                    ), {frameNum: frameNum}).then(function(uid) {
+                        imageDataPromise.then(function(dataURL) {
+                            console.log('attach');
+                            recorder.macro.attachImage(uid, dataURL);
+                        });
+                    });
         }
     };
 
@@ -639,52 +675,62 @@ recorder.logfunc = function(msg) { console.log(msg); };
         }
     };
 
-    proto.onchange = function(e) {
+    proto.onchange = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
-        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Change, e.target());
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Change, e.target(), {
+            frameNum: frameNum
+        });
         recorder.macro.append(v);
         recorder.log("value changed: " + e.target().value);
     };
 
-    proto.onselect = function(e) {
+    proto.onselect = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
         recorder.log("select: " + e.target());
     };
 
-    proto.onsubmit = function(e) {
+    proto.onsubmit = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
         // We want to save the form element as the event target
         var t = e.target();
         while (t.parentNode && t.tagName != "FORM") {
             t = t.parentNode;
         }
-        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Submit, t);
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Submit, t, {
+            frameNum: frameNum
+        });
         recorder.macro.append(v);
         recorder.log("submit: " + e.target());
     };
 
-    proto.ondrag = function(e) {
+    proto.ondrag = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
         recorder.macro.append(
                 new VoiceCommander.MouseEvent(
-                        EVENT_CODE.MouseDrag, e.target(), e.posX(), e.posY()
+                        EVENT_CODE.MouseDrag, e.target(), e.posX(), e.posY(), {
+                            frameNum: frameNum
+                        }
                 ));
     };
-    proto.onmousedown = function(e) {
+    proto.onmousedown = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
         if (e.button() == BUTTON_CODE.LeftButton) {
             recorder.macro.append(
                 new VoiceCommander.MouseEvent(
-                        EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY()
+                        EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY(), {
+                            frameNum: frameNum
+                        }
                 ));
         }
     };
-    proto.onmouseup = function(e) {
+    proto.onmouseup = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
         if (e.button() == BUTTON_CODE.LeftButton) {
             recorder.macro.append(
                     new VoiceCommander.MouseEvent(
-                            EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY()
+                            EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY(), {
+                                frameNum: frameNum
+                            }
                     ));
         }
     };
@@ -696,7 +742,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     //on Firefox, and reroute oncontextmenu to look like a click event for
     //IE. In both cases, we need to prevent the default action for cmenu.
 
-    proto.onclick = function(e) {
+    proto.onclick = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
 
         if (e.shiftkey()) {
@@ -728,7 +774,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
     */
 
-    proto.onkeypress = function(e) {
+    proto.onkeypress = function(frameNum, e) {
         var e = new VoiceCommander.Event(e);
 
         var last = recorder.macro.peek();
@@ -737,7 +783,9 @@ recorder.logfunc = function(msg) { console.log(msg); };
             recorder.macro.poke(last);
         } else {
             recorder.macro.append(
-                new VoiceCommander.KeyEvent(e.target(), e.keychar())
+                new VoiceCommander.KeyEvent(e.target(), e.keychar(), {
+                    frameNum: frameNum
+                })
             );
         }
         return true;
@@ -754,6 +802,38 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 }(VoiceCommander.Recorder));
 
+function getEveryFrameAndWindow(wnd) {
+    if(!wnd) { wnd = window;}
+
+    var rv = [wnd];
+    var frames = wnd.frames,
+        numFrames = frames.length;
+
+    for(var i = 0; i<numFrames; i++) {
+        rv.push(frames[i]);
+    }
+    return rv;
+}
+function getFrameAwareSelection() {
+    var frames = getEveryFrameAndWindow();
+    var frame, selection, frameNum;
+
+    for(var i = 0; i<frames.length; i++) {
+        frame = frames[i];
+        frameNum = (i === 0) ? false : i-1;
+        selection = frame.getSelection();
+
+        if(selection.type === 'Range') {
+            break;
+        }
+    }
+
+    return {
+        selection: selection,
+        frameNum: frameNum
+    };
+}
+
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var action = request.action;
     if (action == 'started') {
@@ -763,8 +843,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         recorder.stop();
         sendResponse({});
     } else if (action === 'tts_element') {
-        var selection = getSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection);
+        var selectionInfo = getFrameAwareSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selectionInfo.selection, {
+            frameNum: selectionInfo.frameNum
+        });
         recorder.macro.append(e);
     } else if(action === 'clickWhen') {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
@@ -775,23 +857,25 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         recorder.macro.append(e);
     } else if(action === 'setVarValueToSelection') {
-        var selection = getSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection, {
-            var_name: request.var_name
+        var selectionInfo = getFrameAwareSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selectionInfo.selection, {
+            var_name: request.var_name,
+            frameNum: selectionInfo.frameNum
         });
 
         recorder.macro.append(e);
     } else if(action === 'typeVarValue') {
-        var selection = getSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selection, {
-            var_name: request.var_name
+        var selectionInfo = getFrameAwareSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selectionInfo.selection, {
+            var_name: request.var_name,
+            frameNum: selectionInfo.frameNum
         });
 
         recorder.macro.append(e);
     } else if(action === 'enterVar') {
     } else {
-        console.log(action);
-        console.log(request);
+        //console.log(action);
+        //console.log(request);
     }
 });
 
@@ -807,5 +891,15 @@ window.addEventListener('mousemove', function(event) {
     mouseLocation.x = event.pageX;
     mouseLocation.y = event.pageY;
 });
+
+function getImageData(element) {
+    return new Promise(function(resolve, reject) {
+        html2canvas(element, {
+            onrendered: function(canvas) {
+                resolve(canvas.toDataURL());
+            }
+        })
+    });
+}
 
 }());

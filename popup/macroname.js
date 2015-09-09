@@ -1,27 +1,32 @@
 $.widget('voice_commander.macroName', {
 	options: {
 		name: '',
+		editingName: '',
 		varNames: {}
 	},
 	_create: function() {
 		this.element.editableText({
 						updateOwnValue: false,
-						getDisplay: $.proxy(this._getDisplay, this)
+						getDisplay: $.proxy(this._getDisplay, this),
+						getEditingValue: $.proxy(this._getEditingName, this)
 					})
 					.on('textChange', function(event) {
 						postNewName(event.value);
 					});
 
-		chrome.runtime.onMessage.addListener($.proxy(function(request, sender, sendResponse) {
-			var action = request.action;
-
-			if(action === 'nameMacro') {
-				this.fullRefresh();
-			} else if(action === 'varChanged') {
-				this.fullRefresh();
-			}
-		}, this));
+		this.$_onRuntimeMessage = $.proxy(this._onRuntimeMessage, this);
+		chrome.runtime.onMessage.addListener(this.$_onRuntimeMessage);
 		this.fullRefresh();
+	},
+
+	_onRuntimeMessage: function(request, sender, sendResponse) {
+		var action = request.action;
+
+		if(action === 'nameMacro') {
+			this.fullRefresh();
+		} else if(action === 'varChanged') {
+			this.fullRefresh();
+		}
 	},
 
 	_refreshDisplay: function() {
@@ -29,12 +34,19 @@ $.widget('voice_commander.macroName', {
 	},
 
 	fullRefresh: function() {
-		getName().then($.proxy(function(nameInfo) {
-			this.option(nameInfo);
+		Promise.all([getName(), getDisplayName()]).then($.proxy(function(infos) {
+			var nameInfo = infos[0],
+				displayName = infos[1];
+
+			this.option(_.extend({
+				editingName: displayName
+			}, nameInfo));
 		}, this));
 	},
 
 	_destroy: function() {
+		this.element.editableText('destroy');
+		chrome.runtime.onMessage.removeListener(this.$_onRuntimeMessage);
 	},
 	_setOption: function(key, value) {
 		this._super(key, value);
@@ -65,6 +77,10 @@ $.widget('voice_commander.macroName', {
 			element.text('(no name)');
 		}
 		return element;
+	},
+
+	_getEditingName: function() {
+		return this.option('editingName');
 	},
 
 	startEditing: function() {

@@ -6,7 +6,7 @@
 	"version": "0.0.1",
 
 	"background": {
-      "scripts": ["eventCodes.js", "background/annyang.js", "background/model.js",
+      "scripts": ["eventCodes.js", "vendor/underscore.js", "background/annyang.js", "background/model.js",
 		  			"background/background.js", "background/voice_commands.js",
 					"background/icon_manager.js"]
     },
@@ -26,7 +26,10 @@
 
 	"content_scripts": [{
 		"matches": ["http://*/*", "https://*/*", "file://*/*"],
-		"js": ["eventCodes.js", "recorder.js"]
+		"js": ["eventCodes.js", "vendor/jquery-2.1.4.min.js",
+			"vendor/jquery-ui-1.11.4.custom/jquery-ui.js",
+			"vendor/underscore.js", "vendor/html2canvas.js",
+			"clientSide/recorder.js", "clientSide/overlay.js"]
 	}],
 
 	"icons": {
