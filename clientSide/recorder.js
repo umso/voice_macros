@@ -1,6 +1,30 @@
-(function() {
-
 var TEXT_NODE_TYPE = 3;
+var isTopLevel = self === parent;
+
+function getFrameIndex(wnd, parent) {
+    var frames = parent.frames,
+        numFrames = frames.length;
+
+    for(var i = 0; i<numFrames; i++) {
+        if(frames[i] === wnd) { return i; }
+    }
+    return -1;
+}
+
+function getFramePath() {
+    var framePath = [];
+    var currWindow = window,
+        currParent = parent;
+
+    while(currWindow !== currParent) {
+        var index = getFrameIndex(currWindow, currParent);
+        framePath.unshift(index);
+        currWindow = currParent;
+        currParent = currParent.parent;
+    }
+    return framePath;
+}
+
 //----------------------------------------------------------------------------
 //Copyright (c) 2005 Zope Foundation and Contributors.
 
@@ -53,30 +77,19 @@ if (typeof(VoiceCommander) == "undefined") {
 if (typeof(VoiceCommander.Browser) == "undefined") {
     VoiceCommander.Browser = {};
 }
-VoiceCommander.Browser.doCaptureEvent = function(wnd, name, func, frameNum) {
+
+VoiceCommander.Browser.captureEvent = function(wnd, name, func) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.captureEvents(Event[name.toUpperCase()]);
-    wnd["on" + lname] = func.bind(this, frameNum);
+    wnd["on" + lname] = func;
 };
 
-VoiceCommander.Browser.captureEvent = function(wnd, name, func) {
-    getEveryFrameAndWindow(wnd).forEach(function(frame, i) {
-        VoiceCommander.Browser.doCaptureEvent(frame, name, func, (i===0) ? false : i-1);
-    });
-};
-
-VoiceCommander.Browser.doReleaseEvent = function(wnd, name, func) {
+VoiceCommander.Browser.releaseEvent = function(wnd, name, func) {
     var lname = name.toLowerCase();
     var doc = wnd.document;
     wnd.releaseEvents(Event[name.toUpperCase()]);
     wnd["on" + lname] = null;
-};
-
-VoiceCommander.Browser.releaseEvent = function(wnd, name, func) {
-    getEveryFrameAndWindow(wnd).forEach(function(frame, i) {
-        VoiceCommander.Browser.doReleaseEvent(frame, name, func, (i === 0) ? false : i-1);
-    });
 };
 
 
@@ -86,8 +99,8 @@ VoiceCommander.Browser.windowHeight = function(wnd) {
         return wnd.innerHeight;
     } else if (doc.documentElement && doc.documentElement.clientHeight) {
         return doc.documentElement.clientHeight;
-    } else if (document.body) {
-        return document.body.clientHeight;
+    } else if (doc.body) {
+        return doc.body.clientHeight;
     } else {
         return -1;
     }
@@ -99,8 +112,8 @@ VoiceCommander.Browser.windowWidth = function(wnd) {
         return wnd.innerWidth;
     } else if (doc.documentElement && doc.documentElement.clientWidth) {
         return doc.documentElement.clientWidth;
-    } else if (document.body) {
-        return document.body.clientWidth;
+    } else if (doc.body) {
+        return doc.body.clientWidth;
     } else {
         return -1;
     }
@@ -250,6 +263,7 @@ VoiceCommander.Macro = function() {
                 action: 'append',
                 obj: o
             }, otherData), function(uid) {
+                o.uid = uid;
                 resolve(uid);
             });
         }.bind(this));
@@ -263,14 +277,23 @@ VoiceCommander.Macro = function() {
         });
     };
 
+    proto.updateStep = function(step) {
+        chrome.runtime.sendMessage({
+            action: 'update_step',
+            step: step
+        });
+    };
+
     proto.peek = function() {
         return this.items[this.items.length - 1];
     };
+    /*
 
     proto.poke = function(o) {
         this.items[this.items.length - 1] = o;
         chrome.runtime.sendMessage({action: "poke", obj: o});
     };
+    */
 }(VoiceCommander.Macro));
 
 
@@ -296,6 +319,7 @@ VoiceCommander.ElementInfo = function(element) {
     this.checked = element.checked;
     this.name = element.name;
     this.type = element.type;
+
     if (this.type) {
         this.type = this.type.toLowerCase();
     }
@@ -441,17 +465,14 @@ VoiceCommander.DocumentEvent = function(type, target) {
     this.type = type;
     this.url = target.URL;
     this.title = target.title;
+    this.frame = getFramePath();
 }
 
 VoiceCommander.ElementEvent = function(type, target, options) {
     this.type = type;
     this.info = new VoiceCommander.ElementInfo(target);
-    for(var key in options) {
-        if(options.hasOwnProperty(key)) {
-            var value = options[key];
-            this[key] = value;
-        }
-    }
+    this.frame = getFramePath();
+    _.extend(this, options);
 }
 
 VoiceCommander.SelectionEvent = function(type, selection, options) {
@@ -462,6 +483,7 @@ VoiceCommander.SelectionEvent = function(type, selection, options) {
     this.commonAncestorContainer = new VoiceCommander.ElementInfo(range.commonAncestorContainer);
     this.startOffset = range.startOffset;
     this.endOffset = range.endOffset;
+    this.frame = getFramePath();
 
     _.extend(this, options);
 }
@@ -475,6 +497,7 @@ VoiceCommander.KeyEvent = function(target, text, options) {
     this.type = EVENT_CODE.KeyPress;
     this.info = new VoiceCommander.ElementInfo(target);
     this.text = text;
+    this.frame = getFramePath();
 
     _.extend(this, options);
 }
@@ -484,12 +507,14 @@ VoiceCommander.MouseEvent = function(type, target, x, y, options) {
     this.info = new VoiceCommander.ElementInfo(target);
     this.x = x;
     this.y = y;
+    this.frame = getFramePath();
 
     _.extend(this, options);
 }
 
 VoiceCommander.ScreenShotEvent = function() {
     this.type = EVENT_CODE.ScreenShot;
+    this.frame = getFramePath();
 }
 
 VoiceCommander.OpenURLEvent = function(url) {
@@ -497,12 +522,14 @@ VoiceCommander.OpenURLEvent = function(url) {
     this.url = url;
     this.width = window.innerWidth;
     this.height = window.innerHeight;
+    this.frame = getFramePath();
 }
 
 VoiceCommander.PageLoadEvent = function(url) {
     this.type = EVENT_CODE.OpenUrl;
     this.url = url;
     this.viaBack = back
+    this.frame = getFramePath();
 }
 
 //---------------------------------------------------------------------------
@@ -566,9 +593,11 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 
     proto.open = function(url) {
-        var e = new VoiceCommander.OpenURLEvent(url);
-        this.macro.append(e);
-        //this.log("open url: " + url);
+        if(isTopLevel) {
+            var e = new VoiceCommander.OpenURLEvent(url);
+            this.macro.append(e);
+            //this.log("open url: " + url);
+        }
     };
 
     proto.pageLoad = function() {
@@ -598,7 +627,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
 
 
 
-    proto.clickaction = function(frameNum, e) {
+    proto.clickaction = function(e) {
         var target = e.target();
         // This method is called by our low-level event handler when the mouse
         // is clicked in normal mode. Its job is decide whether the click is
@@ -611,7 +640,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
         var imageDataPromise = getImageData(target);
         if (target.href || (type && type == "submit") ||
                 (type && type == "submit")) {
-            this.macro.append(new VoiceCommander.ElementEvent(EVENT_CODE.Click, target, {frameNum: frameNum}));
+            this.macro.append(new VoiceCommander.ElementEvent(EVENT_CODE.Click, target));
         } else {
             var posX = e.posX,
                 posY = e.posY();
@@ -619,9 +648,8 @@ recorder.logfunc = function(msg) { console.log(msg); };
             recorder.macro.append(
                     new VoiceCommander.MouseEvent(
                             EVENT_CODE.Click, target, posX, posY
-                    ), {frameNum: frameNum}).then(function(uid) {
+                    )).then(function(uid) {
                         imageDataPromise.then(function(dataURL) {
-                            console.log('attach');
                             recorder.macro.attachImage(uid, dataURL);
                         });
                     });
@@ -669,68 +697,58 @@ recorder.logfunc = function(msg) { console.log(msg); };
             }
 
             // record the fact that a page load happened
-            if (this.window) {
+            if (this.window && isTopLevel) {
                 this.pageLoad();
             }
         }
     };
 
-    proto.onchange = function(frameNum, e) {
+    proto.onchange = function(e) {
         var e = new VoiceCommander.Event(e);
-        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Change, e.target(), {
-            frameNum: frameNum
-        });
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Change, e.target(), { });
         recorder.macro.append(v);
         recorder.log("value changed: " + e.target().value);
     };
 
-    proto.onselect = function(frameNum, e) {
+    proto.onselect = function(e) {
         var e = new VoiceCommander.Event(e);
         recorder.log("select: " + e.target());
     };
 
-    proto.onsubmit = function(frameNum, e) {
+    proto.onsubmit = function(e) {
         var e = new VoiceCommander.Event(e);
         // We want to save the form element as the event target
         var t = e.target();
         while (t.parentNode && t.tagName != "FORM") {
             t = t.parentNode;
         }
-        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Submit, t, {
-            frameNum: frameNum
-        });
+        var v = new VoiceCommander.ElementEvent(EVENT_CODE.Submit, t, { });
         recorder.macro.append(v);
         recorder.log("submit: " + e.target());
     };
 
-    proto.ondrag = function(frameNum, e) {
+    proto.ondrag = function(e) {
         var e = new VoiceCommander.Event(e);
         recorder.macro.append(
                 new VoiceCommander.MouseEvent(
-                        EVENT_CODE.MouseDrag, e.target(), e.posX(), e.posY(), {
-                            frameNum: frameNum
-                        }
+                        EVENT_CODE.MouseDrag, e.target(), e.posX(), e.posY(), { }
                 ));
     };
-    proto.onmousedown = function(frameNum, e) {
+    proto.onmousedown = function(e) {
         var e = new VoiceCommander.Event(e);
         if (e.button() == BUTTON_CODE.LeftButton) {
             recorder.macro.append(
                 new VoiceCommander.MouseEvent(
-                        EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY(), {
-                            frameNum: frameNum
-                        }
+                        EVENT_CODE.MouseDown, e.target(), e.posX(), e.posY(), { }
                 ));
         }
     };
-    proto.onmouseup = function(frameNum, e) {
+    proto.onmouseup = function(e) {
         var e = new VoiceCommander.Event(e);
         if (e.button() == BUTTON_CODE.LeftButton) {
             recorder.macro.append(
                     new VoiceCommander.MouseEvent(
-                            EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY(), {
-                                frameNum: frameNum
-                            }
+                            EVENT_CODE.MouseUp, e.target(), e.posX(), e.posY(), { }
                     ));
         }
     };
@@ -742,7 +760,7 @@ recorder.logfunc = function(msg) { console.log(msg); };
     //on Firefox, and reroute oncontextmenu to look like a click event for
     //IE. In both cases, we need to prevent the default action for cmenu.
 
-    proto.onclick = function(frameNum, e) {
+    proto.onclick = function(e) {
         var e = new VoiceCommander.Event(e);
 
         if (e.shiftkey()) {
@@ -774,18 +792,16 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
     */
 
-    proto.onkeypress = function(frameNum, e) {
+    proto.onkeypress = function(e) {
         var e = new VoiceCommander.Event(e);
 
         var last = recorder.macro.peek();
-        if(last.type == EVENT_CODE.KeyPress) {
+        if(last && last.type == EVENT_CODE.KeyPress) {
             last.text = last.text + e.keychar();
-            recorder.macro.poke(last);
+            recorder.macro.updateStep(last);
         } else {
             recorder.macro.append(
-                new VoiceCommander.KeyEvent(e.target(), e.keychar(), {
-                    frameNum: frameNum
-                })
+                new VoiceCommander.KeyEvent(e.target(), e.keychar(), { })
             );
         }
         return true;
@@ -802,36 +818,13 @@ recorder.logfunc = function(msg) { console.log(msg); };
     };
 }(VoiceCommander.Recorder));
 
-function getEveryFrameAndWindow(wnd) {
-    if(!wnd) { wnd = window;}
-
-    var rv = [wnd];
-    var frames = wnd.frames,
-        numFrames = frames.length;
-
-    for(var i = 0; i<numFrames; i++) {
-        rv.push(frames[i]);
-    }
-    return rv;
+function getCurrentSelection() {
+    return window.getSelection();
 }
-function getFrameAwareSelection() {
-    var frames = getEveryFrameAndWindow();
-    var frame, selection, frameNum;
 
-    for(var i = 0; i<frames.length; i++) {
-        frame = frames[i];
-        frameNum = (i === 0) ? false : i-1;
-        selection = frame.getSelection();
-
-        if(selection.type === 'Range') {
-            break;
-        }
-    }
-
-    return {
-        selection: selection,
-        frameNum: frameNum
-    };
+function somethingIsSelected() {
+    var selection = getCurrentSelection();
+    return selection.type === 'Range';
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -843,11 +836,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         recorder.stop();
         sendResponse({});
     } else if (action === 'tts_element') {
-        var selectionInfo = getFrameAwareSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selectionInfo.selection, {
-            frameNum: selectionInfo.frameNum
-        });
-        recorder.macro.append(e);
+        if(somethingIsSelected()) {
+            var selection = getCurrentSelection();
+            var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection, { });
+            recorder.macro.append(e);
+        }
     } else if(action === 'clickWhen') {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
         var e = new VoiceCommander.ElementEvent(EVENT_CODE.ClickWhen, element, {
@@ -857,21 +850,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         recorder.macro.append(e);
     } else if(action === 'setVarValueToSelection') {
-        var selectionInfo = getFrameAwareSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selectionInfo.selection, {
-            var_name: request.var_name,
-            frameNum: selectionInfo.frameNum
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, getCurrentSelection(), {
+            var_name: request.var_name
         });
 
         recorder.macro.append(e);
     } else if(action === 'typeVarValue') {
-        var selectionInfo = getFrameAwareSelection();
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, selectionInfo.selection, {
-            var_name: request.var_name,
-            frameNum: selectionInfo.frameNum
-        });
+        if(somethingIsSelected()) {
+            var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, getCurrentSelection(), {
+                var_name: request.var_name
+            });
 
-        recorder.macro.append(e);
+            recorder.macro.append(e);
+        }
     } else if(action === 'enterVar') {
     } else {
         //console.log(action);
@@ -901,5 +892,3 @@ function getImageData(element) {
         })
     });
 }
-
-}());

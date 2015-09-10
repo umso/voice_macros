@@ -7,6 +7,7 @@ var LOG_LEVEL = {
 	INFO: 1
 };
 var SCRIPT_SIGNATURE = 'VCMDRv1';
+var TAKE_SSHOTS = true;
 
 function CasperRenderer(title, recording) {
 	this.title = title;
@@ -142,13 +143,19 @@ function CasperRenderer(title, recording) {
 
 	proto.getIndexType = function(index) {
 		return this.getType(this.getItem(index));
-	}
+	};
+	proto.takeScreenshot = function(ss_name, indent) {
+		if(!indent) { indent = 0; }
+
+        this.stmt('spooky.then(function() {', indent)
+            .stmt('this.page.render("' + ss_name + '");', indent + 1)
+            .stmt('});', indent);
+	};
 
 	proto.renderBody = function(with_xy) {
         this.with_xy = !!with_xy;
         var last_down = null;
         var forget_click = false;
-
         for (var i=0; i < this.numItems(); i++) {
 	        var item = this.getItem(i),
 				type = this.getType(item);
@@ -158,6 +165,7 @@ function CasperRenderer(title, recording) {
 	                this.stmt("//ERROR: the recorded sequence does not start with a url openning.");
 	            } else {
 	                this.startUrl(item);
+					this.takeScreenshot('scripts/sshot_' + i + '.png');
 	            }
 	        } else if(type === EC.MouseDown) {
 		        // remember last MouseDown to identify drag
@@ -170,11 +178,13 @@ function CasperRenderer(title, recording) {
 	                this[this.dispatch[EC.MouseDrag]](item);
 	                last_down = null;
 	                forget_click = true;
+					this.takeScreenshot('scripts/sshot_' + i + '.png');
 	            }
 	        } else if(type === EC.Click && forget_click) {
 	            forget_click = false;
 	        } else if (this.dispatch[type]) {
 	            this[this.dispatch[type]](item, i);
+				this.takeScreenshot('scripts/sshot_' + i + '.png');
 	        }
         }
 	};
@@ -207,6 +217,13 @@ function CasperRenderer(title, recording) {
 	            .space();
 
 			if(headerContent) {
+		        var firstItem = this.getItem(0);
+				if(firstItem.width && firstItem.height) {
+					headerContent = headerContent.replace('viewportSize: {}', 'viewportSize: ' + JSON.stringify({
+						width: firstItem.width,
+						height: firstItem.height
+					}));
+				}
 				this.writeln(headerContent);
 			}
 		}, this));
@@ -239,9 +256,10 @@ function CasperRenderer(title, recording) {
 			.space();
     };
 
-    proto.openUrl = function(item) {
+    proto.openUrl = function(item, index) {
         var url = this.pyrepr(this.rewriteUrl(item.url));
         var history = this.history;
+		var previousStep = this.getItem(index-1);
 
         // if the user apparently hit the back button, render the event as such
         if (url == history[history.length - 2]) {
@@ -251,7 +269,7 @@ function CasperRenderer(title, recording) {
 
             history.pop();
             history.pop();
-        } else {
+        } else if(!previousStep || previousStep.type !== EC.Submit) {
             this.stmt("spooky.thenOpen(" + url + ");");
         }
     };
@@ -309,11 +327,13 @@ function CasperRenderer(title, recording) {
     };
 
 	proto.getElementSelector = function(item) {
+        var tag = item.info.tagName.toLowerCase();
         var selector;
         if (tag == 'a') {
             var xpath_selector = this.getLinkXPath(item);
             if(xpath_selector) {
-                selector = 'x("//a['+xpath_selector+']")';
+				selector = '{type:"xpath", path: "//a['+ xpath_selector +']"}';
+                //selector = 'x("//a['+xpath_selector+']")';
             } else {
                 selector = item.info.selector;
             }
@@ -331,17 +351,26 @@ function CasperRenderer(title, recording) {
         var tag = item.info.tagName.toLowerCase();
         if(this.with_xy && !(tag == 'a' || tag == 'input' || tag == 'button')) {
             this.stmt('spooky.then(function() {')
+
+				.switchToChildFrame(item.frame, 4)
                 .stmt('this.mouse.click(' + item.x + ', ' + item.y + ');', 1)
 				.logStatement('Clicked (' + item.x + ', ' + item.y + ')', LOG_LEVEL.INFO, 1)
+				.escapeChildFrame(item.frame, 4)
+
                 .stmt('});');
         } else {
 			var selector = this.getElementSelector(item);
 
-            this.stmt('spooky.waitForSelector('+ selector + ',')
-				.stmt('//' + item.info.frameNum)
+            //this.stmt('spooky.waitForSelector('+ selector + ',')
+			this.waitForSelector(selector, item.frame)
+	            .stmt('spooky.then(')
                 .stmt('function () {', 1)
+
+				.switchToChildFrame(item.frame, 2)
                 .stmt('this.click('+ selector + ');', 2)
 				.logStatement('Clicked ' + selector, LOG_LEVEL.INFO, 2)
+				.escapeChildFrame(item.frame, 2)
+
                 .stmt('});', 1)
 				.space();
         }
@@ -363,17 +392,23 @@ function CasperRenderer(title, recording) {
 
     proto.keypress = function(item, index) {
         var text = item.text.replace('\n','').replace('\r', '\\r'),
-			selector = this.getControl(item.info);
+			selector = '"' + this.getControl(item.info) + '"';
 
 		if(this.getIndexType(index+1) === EC.Change) {
 			var changeItem = this.getItem(index+1);
 			text = changeItem.info.value;
 		}
 
-        this.stmt('spooky.waitForSelector("' + selector + '",')
+        //this.stmt('spooky.waitForSelector("' + selector + '",')
+		this.waitForSelector(selector, item.frame)
+	        .stmt('spooky.then(')
             .stmt('function () {', 1)
-            .stmt('this.sendKeys("' + selector + '", "' + text + '");', 2)
+
+			.switchToChildFrame(item.frame, 2)
+            .stmt('this.sendKeys(' + selector + ', "' + text + '");', 2)
 			.logStatement('Sent Keys ' + selector, LOG_LEVEL.INFO, 2)
+			.escapeChildFrame(item.frame, 2)
+
             .stmt('});', 1)
 			.space();
     };
@@ -382,6 +417,22 @@ function CasperRenderer(title, recording) {
         // the submit has been called somehow (user, or script)
         // so no need to trigger it.
         this.stmt("/* submit form */");
+
+		var formSelector = this.getFormSelector(item);
+
+/*
+		this.waitForSelector(formSelector, item.frame)
+	        .stmt('spooky.then(')
+            .stmt('function () {', 1)
+
+			.switchToChildFrame(item.frame, 2)
+            .stmt('this.fill("' + formSelector + '", {}, true);', 2)
+			.logStatement('Filled form ' + formSelector, LOG_LEVEL.INFO, 2)
+			.escapeChildFrame(item.frame, 2)
+
+            .stmt('});', 1)
+			.space();
+			*/
     };
 
     proto.screenShot = function(item) {
@@ -408,16 +459,49 @@ function CasperRenderer(title, recording) {
 
 	// read the content of an element out loud
 	proto.readelement = function(item, index) {
-		var commonAncestorControl = this.getControl(item.commonAncestorContainer);
+		var commonAncestorControl = '"' + this.getControl(item.commonAncestorContainer) + '"';
 
 		this.space()
-			.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.waitForSelector(commonAncestorControl, item.frame)
+			//.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.stmt('spooky.then(')
 			.stmt('function() {', 1)
-			.sayStatement('this.fetchText("'+commonAncestorControl+'")', 2)
+
+			.switchToChildFrame(item.frame, 2)
+			.sayStatement('this.fetchText('+commonAncestorControl+')', 2)
 			.logStatement('Read ' + commonAncestorControl, LOG_LEVEL.INFO, 2)
+			.escapeChildFrame(item.frame, 2)
+
             .stmt('});', 1)
 			.space();
 	};
+
+	proto.switchToChildFrame = function(framePath, indent) {
+		for(var i = 0; i<framePath.length; i++) {
+			this.stmt('this.page.switchToFrame(' + framePath[i] + ');', indent);
+		}
+		return this;
+	};
+
+	proto.escapeChildFrame = function(framePath, indent) {
+		if(framePath.length > 0) {
+			this.stmt('this.page.switchToMainFrame();', indent);
+		}
+
+		return this;
+	};
+
+	proto.waitForSelector = function(selector, framePath, indent) {
+		if(!indent) { indent = 0; }
+
+		return this	.stmt('spooky.waitFor(function() {', indent)
+					.switchToChildFrame(framePath, indent+1)
+					.stmt('var exists = this.exists(' + selector + ');', indent+1)
+					.escapeChildFrame(framePath, indent+1)
+					.stmt('return exists;', indent+1)
+					.stmt('});', indent);
+	};
+
 
 	// click on some condition of a variable value
 	proto.clickwhen = function(item, index) {
@@ -429,9 +513,17 @@ function CasperRenderer(title, recording) {
         this.space()
 			.stmt('spooky.then(function() {')
 			.stmt('if(this.env['+ this.pyrepr(varName) +'] === ' + this.pyrepr(value) + ') {', 1)
-            .stmt('spooky.waitForSelector('+ selector + ',', 2)
+
+			.waitForSelector(selector, item.frame, 2)
+
+            //.stmt('spooky.waitForSelector('+ selector + ',', 2)
+            .stmt('spooky.then(', 2)
             .stmt('function () {', 3)
+
+			.switchToChildFrame(item.frame, 4)
             .stmt('this.click('+ selector + ');', 4)
+			.escapeChildFrame(item.frame, 4)
+
 			.logStatement('Clicked ' + selector, LOG_LEVEL.INFO, 4)
             .stmt('});', 2)
             .stmt('}', 1)
@@ -445,10 +537,16 @@ function CasperRenderer(title, recording) {
 		var varName = item.var_name;
 
 		this.space()
-			.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.waitForSelector(commonAncestorControl, item.frame)
+			//.stmt('spooky.waitForSelector("' + commonAncestorControl + '",')
+			.stmt('spooky.then(')
 			.stmt('function() {', 1)
-			.stmt('this.env['+this.pyrepr(varName)+'] = this.promptResult;', 1)
-			.logStatement('Got ' + this.pyrepr(varName), LOG_LEVEL.INFO, 1)
+
+			.switchToChildFrame(item.frame, 2)
+			.stmt('this.env['+this.pyrepr(varName)+'] = this.fetchText("'+commonAncestorControl+'");', 2)
+			.logStatement('Got ' + this.pyrepr(varName), LOG_LEVEL.INFO, 2)
+			.escapeChildFrame(item.frame, 2)
+
             .stmt('});', 1)
 			.space();
 	};

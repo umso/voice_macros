@@ -1,16 +1,7 @@
 var wasRecording = false;
 
 $(function() {
-	var unuploadedRecording = localStorage.getItem(LSKEY);
-	if(unuploadedRecording) {
-		var recording;
-		try {
-			recording = JSON.parse(unuploadedRecording);
-		} catch(e) {
-			console.error(e);
-		}
-	}
-	if(recording) {
+	if(localStorage.getItem(LSKEY)) {
 		doUploadScript();
 	} else {
 		enterCurrentStatusState();
@@ -43,19 +34,19 @@ function stringifyRecording(rec) {
 
 	rv.actions = _.map(rec.actions, function(action) {
 		var altAction = _.extend({}, action);
-		delete altAction.dataURI;
+		delete altAction.imageURI;
 		return altAction;
-	})
+	});
 	return JSON.stringify(rv);
 }
 
-function doUploadScript() {
+function doUploadScript(recording) {
 	var currCasperScript;
 
 	return enterUploadingState().then(function() {
 		return getRecording();
 	}).then(function(info) {
-		localStorage.setItem(LSKEY, stringifyRecording(info));
+		localStorage.setItem(LSKEY, true);
 		var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
 		return dt.render();
 	}).then(function(casperScript) {
@@ -65,6 +56,7 @@ function doUploadScript() {
 		localStorage.removeItem(LSKEY);
 		enterIdleState();
 	}, function(err) {
+		console.log(err.stack);
 		return enterErrorState('Error uploading command', {
 			'Retry': function() {
 				doUploadScript();

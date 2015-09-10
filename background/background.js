@@ -44,10 +44,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 			uid: request.uid,
 			imageURI: request.dataURI
 		});
-		console.log('attached image');
 		sendResponse(currentRecording);
 	} else if(action === 'update_step') {
 		updateStep(request.step);
 		sendResponse(currentRecording);
+	} else if(action === 'poke') {
+
 	}
 });
