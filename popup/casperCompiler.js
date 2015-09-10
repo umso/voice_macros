@@ -491,7 +491,7 @@ function CasperRenderer(title, recording) {
 		return this;
 	};
 
-	proto.waitForSelector = function(selector, framePath, indent) {
+	proto.waitForSelector = function(selector, framePath, indent, onThen, onTimeout) {
 		if(!indent) { indent = 0; }
 
 		return this	.stmt('spooky.waitFor(function() {', indent)
