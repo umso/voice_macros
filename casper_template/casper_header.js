@@ -7,7 +7,7 @@ var say = require('say'),
 	prompt = require('prompt'),
 	Speakable = require('speakable');
 
-function runScript() {
+function runScript(args) {
 	var spooky = new Spooky({
 	    child: {
 	        transport: 'http',

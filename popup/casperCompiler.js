@@ -252,7 +252,12 @@ function CasperRenderer(title, recording) {
 			.stmt("this.env = {};", 1)
 			.logStatement('Started at ' + url + '', LOG_LEVEL.INFO, 1)
 			.stmt("});")
-			.space();
+			.space()
+			.stmt("spooky.then([{")
+			.stmt("args: args", 1)
+			.stmt("}, function() {", 1)
+			.stmt("this.env = args;", 2)
+			.stmt("}]);");
     };
 
     proto.openUrl = function(item, index) {

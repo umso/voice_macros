@@ -214,13 +214,20 @@ if(require.main === module) {
     speak = speakLocally;
 	requestInteraction = requestInteractionLocally;
 
-    runScript();
+	var args = {};
+	var processArgs = process.argv.slice(2);
+
+	processArgs.forEach(function(val, index) {
+		args['$'+(index+1)] = val;
+	});
+
+    runScript(args);
 } else {
-    module.exports = function(socket) {
+    module.exports = function(args, socket) {
         textPrompt = getRemoteTextPromptFunction(socket);
         voicePrompt = getRemoteVoicePromptFunction(socket);
         speak = getRemoteSpeakFunction(socket);
-        var spooky = runScript();
+        var spooky = runScript(args);
 		requestInteraction = getRemoteInteractionFunction(socket, spooky);
     };
 }
