@@ -33,7 +33,7 @@ function CasperRenderer(title, recording) {
         var output = '';
         indent = indent || 0;
 
-		indent += 2; // We are inside a function body so add an extra tabs
+		indent += 3; // We are inside a function body so add an extra tabs
 
         for(var i = 0; i<indent*TAB_SIZE; i++) {
             output += ' ';
@@ -162,10 +162,10 @@ function CasperRenderer(title, recording) {
 
 	        if(i===0) {
 	            if(type!=EC.OpenUrl) {
-	                this.stmt("//ERROR: the recorded sequence does not start with a url openning.");
+	                this.stmt("//ERROR: the recorded sequence does not start with a url.");
 	            } else {
 	                this.startUrl(item);
-					this.takeScreenshot('scripts/sshot_' + i + '.png');
+					//this.takeScreenshot('scripts/sshot_' + i + '.png');
 	            }
 	        } else if(type === EC.MouseDown) {
 		        // remember last MouseDown to identify drag
@@ -178,13 +178,13 @@ function CasperRenderer(title, recording) {
 	                this[this.dispatch[EC.MouseDrag]](item);
 	                last_down = null;
 	                forget_click = true;
-					this.takeScreenshot('scripts/sshot_' + i + '.png');
+					//this.takeScreenshot('scripts/sshot_' + i + '.png');
 	            }
 	        } else if(type === EC.Click && forget_click) {
 	            forget_click = false;
 	        } else if (this.dispatch[type]) {
 	            this[this.dispatch[type]](item, i);
-				this.takeScreenshot('scripts/sshot_' + i + '.png');
+				//this.takeScreenshot('scripts/sshot_' + i + '.png');
 	        }
         }
 	};
@@ -248,8 +248,7 @@ function CasperRenderer(title, recording) {
     proto.startUrl = function(item) {
 		var url = this.pyrepr(this.rewriteUrl(item.url));
 
-		this.space()
-			.stmt("spooky.start(" + url + ", function() {")
+		this.stmt("spooky.start(" + url + ", function() {")
 			.stmt("this.env = {};", 1)
 			.logStatement('Started at ' + url + '', LOG_LEVEL.INFO, 1)
 			.stmt("});")
@@ -494,12 +493,29 @@ function CasperRenderer(title, recording) {
 	proto.waitForSelector = function(selector, framePath, indent, onThen, onTimeout) {
 		if(!indent) { indent = 0; }
 
-		return this	.stmt('spooky.waitFor(function() {', indent)
-					.switchToChildFrame(framePath, indent+1)
-					.stmt('var exists = this.exists(' + selector + ');', indent+1)
-					.escapeChildFrame(framePath, indent+1)
-					.stmt('return exists;', indent+1)
-					.stmt('});', indent);
+		return this	.stmt('spooky.then(function() {', indent)
+					.stmt('this.waitingForFn = function() {', indent+1)
+					.switchToChildFrame(framePath, indent+2)
+					.stmt('var exists = this.exists(' + selector + ');', indent+2)
+					.escapeChildFrame(framePath, indent+2)
+					.stmt('return exists;', indent+2)
+					.stmt('}', indent+1)
+					.stmt('});')
+					.space()
+					.stmt('spooky.waitFor(function() {', indent)
+					.stmt('var canContinue = this.waitingForFn();', indent+1)
+					.stmt('if(canContinue) {', indent+1)
+					.stmt('delete this.waitingForFn;', indent+2)
+					.stmt('}', indent+1)
+					.stmt('return canContinue;', indent+1)
+					.stmt('},', indent)
+					.stmt('function() {}, ', indent)
+					.stmt('function() {', indent)
+					.stmt('var info = { ssid: "sshot.png" };', indent+1)
+					.stmt('this.page.render("sshots/" + info.ssid);', indent+1)
+					.emitStatement('requestInteraction', 'info', indent+1)
+					.stmt('}', indent)
+					.stmt(');', indent);
 	};
 
 
