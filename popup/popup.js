@@ -62,8 +62,8 @@ function doUploadScript(recording) {
 				doUploadScript();
 			}, 'Download': function() {
 				downloadJSFile(currCasperScript.body, 'casper_script.js');
-				localStorage.removeItem(LSKEY);
-				enterCurrentStatusState();
+				//localStorage.removeItem(LSKEY);
+				//enterCurrentStatusState();
 			}, 'Cancel': function() {
 				localStorage.removeItem(LSKEY);
 				enterCurrentStatusState();

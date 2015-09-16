@@ -824,7 +824,67 @@ function getCurrentSelection() {
 
 function somethingIsSelected() {
     var selection = getCurrentSelection();
-    return selection.type === 'Range';
+    return selection && selection.type === 'Range';
+}
+
+function ttsElement() {
+    if(somethingIsSelected()) {
+        var selection = getCurrentSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection, { });
+        recorder.macro.append(e);
+    }
+}
+
+function sshotElement() {
+    if(somethingIsSelected()) {
+        var selection = getCurrentSelection();
+        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ShowElement, selection, { });
+        recorder.macro.append(e);
+    }
+}
+
+function requestInput() {
+    console.log('request an input value');
+}
+
+function requestClick() {
+    if(somethingIsSelected()) {
+        var selection = getCurrentSelection();
+        console.log(selection);
+    }
+}
+
+function clickWhen() {
+    if(somethingIsSelected()) {
+        console.log('click when');
+    } else {
+        var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
+        if(element) {
+            var e = new VoiceCommander.ElementEvent(EVENT_CODE.ClickWhen, element, {
+                var_name: request.var_name,
+                value: request.value
+            });
+
+            recorder.macro.append(e);
+        }
+    }
+}
+
+function enterVariableValue(varName) {
+    getCurrentVariableValue(varName).then(function(value) {
+        var selectedItem = $(':focus');
+        if(selectedItem.length > 0) {
+            selectedItem.val(value);
+        }
+    });
+}
+
+function setVarValueToSelection(varName) {
+    var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, getCurrentSelection(), {
+        var_name: varName
+    });
+
+    recorder.macro.append(e);
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -836,46 +896,30 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         recorder.stop();
         sendResponse({});
     } else if (action === 'tts_element') {
-        if(somethingIsSelected()) {
-            var selection = getCurrentSelection();
-            var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection, { });
-            recorder.macro.append(e);
-        }
+        ttsElement();
+    } else if(action === 'sshot_element') {
+        sshotElement();
+    } else if(action === 'req_input') {
+        requestInput();
+    } else if(action === 'req_click') {
+        requestClick();
     } else if(action === 'clickWhen') {
-        var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
-        var e = new VoiceCommander.ElementEvent(EVENT_CODE.ClickWhen, element, {
-            var_name: request.var_name,
-            value: request.value
-        });
-
-        recorder.macro.append(e);
-    } else if(action === 'setVarValueToSelection') {
-        var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, getCurrentSelection(), {
-            var_name: request.var_name
-        });
-
-        recorder.macro.append(e);
-    } else if(action === 'typeVarValue') {
-        if(somethingIsSelected()) {
-            var e = new VoiceCommander.SelectionEvent(EVENT_CODE.SetVarValue, getCurrentSelection(), {
-                var_name: request.var_name
-            });
-
-            recorder.macro.append(e);
-        }
+        clickWhen(request.var_name, request.value);
     } else if(action === 'enterVar') {
+        enterVariableValue(request.var_name);
+    } else if(action === 'setVarValueToSelection') {
+        setVarValueToSelection(request.var_name);
     } else {
         //console.log(action);
         //console.log(request);
     }
 });
 
-//get current status from background
-chrome.runtime.sendMessage({action: "get_status"}, function(response) {
-    if (response.isRecording) {
+isRecording().then(function(ir) {
+    if(ir) {
         recorder.start();
     }
-});
+})
 
 var mouseLocation = {x: -1, y: -1};
 window.addEventListener('mousemove', function(event) {

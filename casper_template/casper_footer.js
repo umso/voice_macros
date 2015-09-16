@@ -1,4 +1,4 @@
-			spooky.then(function() { this.emit('log', 'done'); })
+			spooky.then(function() { this.emit('done'); })
             spooky.run();
         }
     });
@@ -17,6 +17,11 @@
         //}
         console.log(log.message ? log.message.replace(/ \- .*/, '') : log);
     });
+
+	spooky.on('done', function() {
+		spooky.destroy();
+		console.log('Done');
+	});
 
     spooky.on('say', function (toSay) {
         spooky.execute([{}, function () {
@@ -50,9 +55,13 @@
 	spooky.on('requestInteraction', function(info) {
 		requestInteraction(info);
 	});
+
+	spooky.on('sshot_frame', function(base64JPEG) {
+		emitScreenshotFrame(base64JPEG);
+	});
 	return spooky;
 }
-var speak, textPrompt, voicePrompt, requestInteraction;
+var speak, textPrompt, voicePrompt, requestInteraction, emitScreenshotFrame;
 
 
 function doPrompt(promptFunction, promptRequest, timeout) {
@@ -145,6 +154,10 @@ function getRemoteVoicePromptFunction(socket) {
     };
 }
 
+function getLocalInteractionFunction() {
+	return function() { };
+}
+
 function getRemoteInteractionFunction(socket, spooky) {
 	spooky.on('done_interacting', function(info) {
 		socket.emit('done_interacting', info);
@@ -194,25 +207,36 @@ function getRemoteInteractionFunction(socket, spooky) {
 				interval_id: sshotInterval
 			}, function() {
 				if(this.interacting) {
-					this.page.render('sshots/' + info.ssid);
+					this.emit('sshot_frame', this.page.renderBase64('jpeg'));
 				} else {
 					this.emit('clear_interval', interval_id);
 				}
             }]);
-			socket.emit('update_sshot', info);
+			//socket.emit('update_sshot', info);
 		}, 1000);
 
 		socket.emit('show_sshot', info);
 	};
 }
 
-function requestInteractionLocally() { }
+function getRemoteScreenshotFrameEmitter(socket) {
+	return function(base64Data) {
+		socket.emit('sshot_frame', new Buffer(base64Data, 'base64'));
+	};
+}
+
+function getLocalScreenshotFrameEmitter() {
+	return function(base64Data){
+		fs.writeFile("screenshot.jpg", base64Data, { encoding: 'base64' }, function(err) {});
+	};
+}
 
 if(require.main === module) {
     textPromp = textPromptLocally;
     voicePrompt = voicePromptLocally;
     speak = speakLocally;
-	requestInteraction = requestInteractionLocally;
+	emitScreenshotFrame = getLocalScreenshotFrameEmitter();
+	requestInteraction = getLocalInteractionFunction();
 
 	var args = {};
 	var processArgs = process.argv.slice(2);
@@ -227,6 +251,7 @@ if(require.main === module) {
         textPrompt = getRemoteTextPromptFunction(socket);
         voicePrompt = getRemoteVoicePromptFunction(socket);
         speak = getRemoteSpeakFunction(socket);
+		emitScreenshotFrame = getRemoteScreenshotFrameEmitter();
         var spooky = runScript(args);
 		requestInteraction = getRemoteInteractionFunction(socket, spooky);
     };

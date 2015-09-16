@@ -119,7 +119,7 @@ function CasperRenderer(title, recording) {
     d[EC.PageLoad] = "pageLoad";
     d[EC.ScreenShot] = "screenShot";
     /*d[EC.MouseDown] = "mousedown";
-    d[EC.MouseUp] = "mouseup"; */
+    d[EC.MouseUp] = "mouseup";*/
     d[EC.MouseDrag] = "mousedrag";
     d[EC.KeyPress] = "keypress";
     d[EC.ReadElement] = "readelement";

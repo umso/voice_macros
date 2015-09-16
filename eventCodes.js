@@ -26,7 +26,10 @@ var VOICE_COMMANDER_EVENT_CODE = {
 		ReadElement: 24,
 		ClickWhen: 25,
 		SetVarValue: 26,
-		RequestVarValue: 27
+		RequestVarValue: 27,
+		ShowElement: 28,
+		RequestInput: 29,
+		RequestClick: 30
 	},
 	VOICE_COMMANDER_BUTTON_CODE = {
 		LeftButton: 0,

@@ -2,7 +2,7 @@ var currentRecording,
 	isRecording = false,
 	recordingTabID,
 	uid = 1,
-	readContextMenu;
+	voiceEnabled = false;
 
 var TMP_VAR_PREFIX = '_VAR_'
 	TMP_VAR_POSTFIX = '_VAR_',
@@ -54,7 +54,10 @@ function updateComputedNameAndVars() {
 		currentRecording.varNames = varKeys;
 	}
 
-	return updateVariableCommands(varNames);
+	if(voiceEnabled) {
+		updateVariableCommands(varNames);
+	}
+	updateVariableContextMenus(varNames);
 }
 
 function escapeRegExp(string) {
@@ -106,15 +109,10 @@ function doStart(tab_id) {
 		};
 		isRecording = true;
 		updateComputedNameAndVars();
+		addRecordingContextMenus();
 
 		updateIcon();
 		recordingTabID = tab_id;
-
-		readContextMenu = chrome.contextMenus.create({
-			"title": "Read This",
-			"contexts": ["page", "selection", "image", "link"],
-			"onclick" : onRead
-		});
 
 		recordingPromise = getTab(recordingTabID).then(function(tab) {
 			startingURL = tab.url;
@@ -122,7 +120,9 @@ function doStart(tab_id) {
 			chrome.runtime.sendMessage({action: 'started'});
 			chrome.tabs.sendMessage(recordingTabID, { action: 'started' });
 		}).then(function() {
-			return addMacroRecordingCommands();
+			if(voiceEnabled) {
+				return addMacroRecordingCommands();
+			}
 		});
 	}
 
@@ -136,9 +136,14 @@ function doStop(cancelled) {
 		addStartingURL(currentRecording);
 
 		updateIcon();
+
+		if(voiceEnabled) {
+			removeMacroRecordingCommands();
+		}
+
+		removeRecordingContextMenus();
+
 		chrome.runtime.sendMessage({action: 'stopped', cancelled: !!cancelled});
-		chrome.contextMenus.remove(readContextMenu);
-		removeMacroRecordingCommands();
 	}
 }
 
@@ -241,6 +246,18 @@ function onRead() {
 	chrome.tabs.sendMessage(recordingTabID, { action: 'tts_element' });
 }
 
+function onShow() {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'sshot_element' });
+}
+
+function requestInput() {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'req_input' });
+}
+
+function requestClick() {
+	chrome.tabs.sendMessage(recordingTabID, { action: 'req_click' });
+}
+
 function nameMacro(name) {
 	doSetName(name);
 	chrome.runtime.sendMessage({action: 'nameMacro', name: name});
@@ -251,6 +268,8 @@ function clickWhenValue(var_name, value) {
 }
 
 function enterVar(var_name) {
+	var variables = doGetVariables();
+
 	chrome.tabs.sendMessage(recordingTabID, { action: 'enterVar', var_name: var_name });
 }
 

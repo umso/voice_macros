@@ -1,12 +1,13 @@
 {
 	"manifest_version": 2,
 
-	"name": "Voice Macro Recording",
+	"name": "Voice Commander",
 	"description": "Record custom voice commands",
-	"version": "0.0.1",
+	"version": "0.1.0",
 
 	"background": {
-		"scripts": ["eventCodes.js", "vendor/underscore.js", "background/annyang.js", "background/model.js",
+		"scripts": ["eventCodes.js", "vendor/underscore.js", "background/annyang.js",
+			 		"background/context_menus.js", "background/model.js",
 		  			"background/background.js", "background/voice_commands.js",
 					"background/icon_manager.js"]
     },
@@ -29,7 +30,7 @@
 		"js": ["eventCodes.js", "vendor/jquery-2.1.4.min.js",
 			"vendor/jquery-ui-1.11.4.custom/jquery-ui.js",
 			"vendor/underscore.js", "vendor/html2canvas.js",
-			"clientSide/recorder.js", "clientSide/overlay.js"],
+			"clientSide/modelLink.js", "clientSide/recorder.js", "clientSide/overlay.js"],
 		"all_frames": true
 	}],
 
