@@ -830,6 +830,7 @@ function somethingIsSelected() {
 function ttsElement() {
     if(somethingIsSelected()) {
         var selection = getCurrentSelection();
+        showTTSOverlay(selection);
         var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ReadElement, selection, { });
         recorder.macro.append(e);
     }
@@ -838,6 +839,7 @@ function ttsElement() {
 function sshotElement() {
     if(somethingIsSelected()) {
         var selection = getCurrentSelection();
+        showSShotOverlay(selection);
         var e = new VoiceCommander.SelectionEvent(EVENT_CODE.ShowElement, selection, { });
         recorder.macro.append(e);
     }
@@ -851,12 +853,14 @@ function requestClick() {
     if(somethingIsSelected()) {
         var selection = getCurrentSelection();
         console.log(selection);
+        showClickWhenOverlay(selection);
     }
 }
 
 function clickWhen() {
     if(somethingIsSelected()) {
         console.log('click when');
+        showClickWhenOverlay(selection);
     } else {
         var element = document.elementFromPoint(mouseLocation.x, mouseLocation.y);
         if(element) {

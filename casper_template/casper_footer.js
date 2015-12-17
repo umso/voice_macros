@@ -232,7 +232,7 @@ function getLocalScreenshotFrameEmitter() {
 }
 
 if(require.main === module) {
-    textPromp = textPromptLocally;
+    textPrompt = textPromptLocally;
     voicePrompt = voicePromptLocally;
     speak = speakLocally;
 	emitScreenshotFrame = getLocalScreenshotFrameEmitter();
