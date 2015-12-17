@@ -95,22 +95,6 @@ function fieldGetter(fieldName) {
 	}
 }
 
-function uploadScript(scriptInfo) {
-	return new Promise(function(resolve, reject) {
-		$.ajax({
-			url: RUNNER_PROTOCOL + '://' + RUNNER_HOST + ':' + RUNNER_PORT + '/api/v1/uploadCommand',
-			method: 'POST',
-			data: scriptInfo,
-			success: function(response) {
-				resolve(response);
-			},
-			error: function(response) {
-				reject(response);
-			}
-		});
-	});
-}
-
 function downloadJSFile(data, name) {
 	downloadURI('data:text/javascript;charset=utf-8,' + encodeURIComponent(data), name);
 }

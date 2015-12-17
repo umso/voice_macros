@@ -29,8 +29,7 @@
 		"matches": ["http://*/*", "https://*/*", "file://*/*"],
 		"js": ["eventCodes.js", "vendor/jquery-2.1.4.min.js",
 			"vendor/jquery-ui-1.11.4.custom/jquery-ui.js",
-			"vendor/underscore.js", "vendor/html2canvas.js",
-			"clientSide/modelLink.js", "clientSide/recorder.js", "clientSide/overlay.js"],
+			"vendor/underscore.js", "clientSide/modelLink.js", "clientSide/recorder.js"],
 		"all_frames": true
 	}],
 

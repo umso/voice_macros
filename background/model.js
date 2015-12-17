@@ -192,29 +192,6 @@ function getTab(tab_id) {
 	});
 }
 
-var GREEKLETTERS = ['alpha', 'beta', 'gamma', 'delta',
-		'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa',
-		'lamda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho',
-		'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega'];
-
-function addVariable() {
-	var j = 0;
-	var name;
-
-	outer: while(true) {
-		var appendix = (j<1) ? '' : ('_'+j);
-
-		for(var i = 0; i<GREEKLETTERS.length; i++) {
-			name = GREEKLETTERS[i] + appendix;
-
-			if(!hasRecordingVar(name)) {
-				break outer;
-			}
-		}
-	}
-	return setRecordingVar(name, 'value');
-}
-
 function getRecordingVar(name) {
 	return currentRecording.vars[name];
 }

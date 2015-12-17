@@ -7,14 +7,13 @@
         <script type='text/javascript' src='../vendor/jquery-ui-1.11.4.custom/jquery-ui.min.js'></script>
         <script type='text/javascript' src='../vendor/mdl/material.min.js'></script>
         <script type='text/javascript' src='../eventCodes.js'></script>
-        <script type='text/javascript' src='variables.js'></script>
         <script type='text/javascript' src='widgets.js'></script>
         <script type='text/javascript' src='macroName.js'></script>
         <script type='text/javascript' src='actionDisplay.js'></script>
         <script type='text/javascript' src='gotoDisplay.js'></script>
         <script type='text/javascript' src='clickDisplay.js'></script>
-        <script type='text/javascript' src='casperCompiler.js'></script>
         <script type='text/javascript' src='recorderLink.js'></script>
+        <script type='text/javascript' src='upload.js'></script>
         <script type='text/javascript' src='popup.js'></script>
         <link rel='stylesheet' href='../vendor/mdl/material.min.css'>
         <link rel='stylesheet' href='../vendor/mdl/MaterialIcons.css'>
@@ -29,7 +28,7 @@
                 Voice Commander allows you to define custom voice-directed commands by demonstrating them in Chrome.
             </div>
             <a id='createCommand' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>
-                Create a command
+                Start Recording
             </a>
         </div>
         <div style='display: none;' class='mdl-card mdl-shadow--2dp'>
@@ -37,7 +36,6 @@
                 <h2 id='macroName' class='mdl-card__title-text'></h2>
             </div>
         </div>
-        <div style='display: none;' id='variables_card' class='mdl-card mdl-shadow--2dp'></div>
         <div style='display: none;' id='actions_card' class='mdl-card mdl-shadow--2dp'>
             <div class="mdl-card__actions">
                 <a id='stopRecording' class='mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect'>

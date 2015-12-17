@@ -47,11 +47,7 @@ function doUploadScript(recording) {
 		return getRecording();
 	}).then(function(info) {
 		localStorage.setItem(LSKEY, true);
-		var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
-		return dt.render();
-	}).then(function(casperScript) {
-		currCasperScript = casperScript;
-		return uploadScript(casperScript);
+		return uploadScript(info);
 	}).then(function() {
 		localStorage.removeItem(LSKEY);
 		enterIdleState();
@@ -95,11 +91,10 @@ function enterRecordingState() {
 		wasRecording = true;
 
 		$('#introduction_card').hide();
-		$('#variables_card, #actions_card').show();
+		$('#actions_card').show();
 		$('#uploading_card, #error_card').hide();
 
 		$('#actionDisplay').actionDisplay();
-		$('#variables_card').variableListDisplay();
 
 		$('#macroName')	.macroName();
 		updateHeight();
@@ -112,13 +107,12 @@ function enterUploadingState() {
 	return new Promise(function(resolve) {
 		if(wasRecording) {
 			$('#actionDisplay').actionDisplay("destroy");
-			$('#variables_card').variableListDisplay("destroy");
 			$('#macroName').macroName("destroy");
 			wasRecording = false;
 		}
 
 		$('#introduction_card').hide();
-		$('#variables_card, #actions_card').hide();
+		$('#actions_card').hide();
 		$('#uploading_card').show();
 		$('#error_card').hide();
 
@@ -129,7 +123,7 @@ function enterUploadingState() {
 function enterErrorState(message, actions) {
 	return new Promise(function(resolve) {
 		$('#introduction_card').hide();
-		$('#variables_card, #actions_card').hide();
+		$('#actions_card').hide();
 		$('#uploading_card').hide();
 
 		$("#error_card #errorMessage").text(message);
@@ -161,27 +155,15 @@ function enterIdleState() {
 	return new Promise(function(resolve) {
 		if(wasRecording) {
 			$('#actionDisplay').actionDisplay("destroy");
-			$('#variables_card').variableListDisplay("destroy");
 			$('#macroName').macroName("destroy");
 			wasRecording = false;
 		}
 
 		$('#introduction_card').show();
-		$('#variables_card, #actions_card').hide();
+		$('#actions_card').hide();
 		$('#uploading_card, #error_card').hide();
 
 		updateHeight();
 		resolve();
 	});
 }
-
-function handleTestCompilation() {
-	var cmd_str = '{"specifiedName":"my command","vars":{"x":null},"actions":[{"type":0,"url":"http://umich.edu/","width":1044,"height":543,"uid":1},{"type":27,"var_name":"x","request_text":"what is x","uid":2}],"varNames":{},"computedName":"my command"}';
-	var info = JSON.parse(cmd_str);
-	var dt = new CasperRenderer(info.computedName, info.actions, info.varNames);
-	dt.render().then(function(js_file) {
-		return uploadScript(js_file);
-	});
-}
-
-//handleTestCompilation();
