@@ -1,6 +1,7 @@
 function uploadScript(info) {
 	return new Promise(function(resolve, reject) {
-		console.log(info);
+		var recordRef = new Firebase("https://interaction-record.firebaseio.com");
+		recordRef.push(info);
 		resolve(info);
 	});
 }
@@ -22,3 +23,5 @@ function uploadScript(scriptInfo) {
 }
 
 */
+
+
